@@ -1,0 +1,568 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Portal Utama SMP Darul Madinah</title>
+  
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  
+  <style>
+    .animate-fade-in { animation: fadeIn 0.4s ease-out forwards; }
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    .custom-scroll::-webkit-scrollbar { width: 6px; height: 6px; }
+    .custom-scroll::-webkit-scrollbar-thumb { background-color: #cbd5e1; border-radius: 10px; }
+  </style>
+</head>
+<body class="bg-slate-50 font-sans text-slate-800">
+  <!-- Kontainer Utama Aplikasi -->
+  <div id="root">
+    <div style="text-align: center; padding: 50px; color: #666; font-family: sans-serif;">
+      Menyiapkan Tampilan Portal...
+    </div>
+  </div>
+
+  <!-- Skrip Utama Vanilla JS (Bebas Sandbox Error) -->
+  <script>
+    // =========================================================
+    // WAJIB: URL WEB APP GOOGLE APPS SCRIPT ANDA
+    // =========================================================
+    const GAS_URL = "https://script.google.com/macros/s/AKfycbzw3M_iibRuWfrvttDsna_HykEQ80xvbxmwv-talHOUrhqZry4aJUNumT2Wr-xZtE-f/exec"; 
+    
+    const LOGO_URL = "https://iili.io/BPHry3x.png";
+    const COLOR_OPTIONS = ['bg-[#800020]', 'bg-slate-800', 'bg-amber-600', 'bg-emerald-700', 'bg-indigo-800', 'bg-cyan-700', 'bg-purple-800', 'bg-stone-600'];
+
+    // Kumpulan path SVG
+    const SVG_PATHS = {
+      Globe: '<path d="M12 2a10 10 0 1 0 10 10A10 10 0 0 0 12 2zm1 17.93a8 8 0 0 1-2 0m2-15.86a8 8 0 0 1-2 0M3.05 13a8 8 0 0 1 0-2m17.9 2a8 8 0 0 1 0-2m-9.45 6.9a14.5 14.5 0 0 1 0-14.8M10.5 4.1a14.5 14.5 0 0 0 0 15.8M3.6 9h16.8M3.6 15h16.8" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>',
+      BookOpen: '<path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2zm20 0h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>',
+      GraduationCap: '<path d="M21.42 10.922a1 1 0 0 0-.019-1.838L12.83 5.18a2 2 0 0 0-1.66 0L2.6 9.08a1 1 0 0 0 0 1.832l8.57 3.91a2 2 0 0 0 1.66 0z M6 18.8V12 M21.5 12v6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>',
+      Award: '<path d="M12 15a7 7 0 1 0-7-7 7 7 0 0 0 7 7zm-3.5 1.5L5 22l4-2.5 4 2.5-3.5-5.5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>',
+      PenTool: '<path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275Z" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>',
+      FolderOpen: '<path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z M2 10h20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>',
+      FileText: '<path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z M14 2v6h6 M16 13H8 M16 17H8 M10 9H8" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>',
+      Library: '<path d="M16 6V4a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2M4 18v-8a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v8M2 22h20M12 11v7M8 14v4M16 14v4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>',
+      Users: '<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2 M9 7a4 4 0 1 0 0-8 4 4 0 0 0 0 8z M22 21v-2a4 4 0 0 0-3-3.87 M16 3.13a4 4 0 0 1 0 7.75" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>',
+      MessageSquare: '<path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>',
+      Megaphone: '<path d="M3 11h3a2 2 0 0 1 2 2v3a2 2 0 0 1-2 2H3a1 1 0 0 1-1-1v-5a1 1 0 0 1 1-1zm11 1.5a4 4 0 0 0-4-4v8a4 4 0 0 0 4-4zm4 4.5a8 8 0 0 0-8-8v16a8 8 0 0 0 8-8z" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>',
+      Video: '<path d="m22 8-6 4 6 4V8Z M14 5H2a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2Z" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>',
+      Database: '<path d="M12 5c5.523 0 10-1.79 10-4S17.523 0 12 0 2 .21 2 .21s0 1.79 10 1.79 M2 12c0 2.21 4.477 4 10 4s10-1.79 10-4 M2 17c0 2.21 4.477 4 10 4s10-1.79 10-4 M2 4v14M22 4v14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>',
+      Briefcase: '<path d="M16 20V4a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16 M2 20h20M22 6H2 M22 14H2" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>',
+      Layout: '<path d="M3 3h18v18H3z M3 9h18 M9 21V9" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>',
+      Monitor: '<path d="M22 12H2 M12 17v4 M8 21h8 M20 4H4a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2Z" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>',
+      Mail: '<path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z M22 6l-10 7L2 6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>',
+      Calendar: '<path d="M19 4H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2zm-3-2v4M8 2v4M3 10h18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>',
+      ImageIcon: '<path d="M3 3h18v18H3z M21 15l-5-5L5 21 M10 8a1.5 1.5 0 1 1-3 0 1.5 1.5 0 0 1 3 0z" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>',
+      LinkIcon: '<path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71 M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>',
+      Sprout: '<path d="M7 20h10M12 20V10M12 10a4 4 0 0 1 4-4M12 14a4 4 0 0 0-4-4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>',
+      Settings: '<path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.1a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2zM12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6z" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>',
+      Lock: '<rect x="3" y="11" width="18" height="11" rx="2" ry="2" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M7 11V7a5 5 0 0 1 10 0v4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>',
+      Edit2: '<path d="M12 20h9M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>',
+      Trash2: '<polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2M10 11v6M14 11v6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>',
+      Plus: '<line x1="12" y1="5" x2="12" y2="19" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><line x1="5" y1="12" x2="19" y2="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>',
+      Shield: '<path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>',
+      LogOut: '<path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1-2-2h4M16 17l5-5-5-5M21 12H9" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>',
+      ExternalLink: '<path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6M15 3h6v6M10 14 21 3" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>',
+      Key: '<path d="m21 2-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0 1.5 1.5M15.5 7.5 14 6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>',
+      User: '<path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2 M12 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8z" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>',
+      X: '<line x1="18" y1="6" x2="6" y2="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><line x1="6" y1="6" x2="18" y2="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>',
+      CheckCircle: '<path d="M22 11.08V12a10 10 0 1 1-5.93-9.14 M22 4 12 14.01l-3-3" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>',
+      AlertCircle: '<circle cx="12" cy="12" r="10" fill="none" stroke="currentColor" stroke-width="2"/><line x1="12" y1="8" x2="12" y2="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><line x1="12" y1="16" x2="12.01" y2="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>',
+      MapPin: '<path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><circle cx="12" cy="10" r="3" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>',
+      Phone: '<path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>'
+    };
+
+    const WA_SVG = '<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg>';
+    const TIKTOK_SVG = '<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M19.59 6.69a4.83 4.83 0 0 1-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 0 1-5.2 1.74 2.89 2.89 0 0 1 2.31-4.64 2.93 2.93 0 0 1 .88.13V9.4a6.84 6.84 0 0 0-1-.05A6.33 6.33 0 0 0 5 20.1a6.34 6.34 0 0 0 10.86-4.43v-7a8.16 8.16 0 0 0 4.77 1.52v-3.4a4.85 4.85 0 0 1-1-.1z"/></svg>';
+
+    function getIcon(name, size = 24, cls = "") {
+      const path = SVG_PATHS[name] || SVG_PATHS.LinkIcon;
+      return `<svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}" viewBox="0 0 24 24" class="${cls}">${path}</svg>`;
+    }
+
+    // --- STATE APLIKASI ---
+    let appLinks = [];
+    let currentUser = JSON.parse(localStorage.getItem('smp_darul_madinah_admin')) || null;
+    let activeAdminTab = 'links';
+    let currentLinkForm = null;
+    let confirmCallback = null;
+
+    // --- INISIALISASI ---
+    window.onload = () => {
+      renderBase();
+      fetchLinks();
+    };
+
+    async function fetchLinks() {
+      if (GAS_URL.includes("ISI_DENGAN")) return;
+      try {
+        const res = await fetch(`${GAS_URL}?action=getLinks`);
+        const data = await res.json();
+        if (data.status === 'success') {
+          appLinks = data.links || [];
+          if (currentUser) {
+             renderAdminLinks();
+          } else {
+             renderPublicLinks();
+          }
+        }
+      } catch (e) {
+        console.error("Gagal menarik data");
+      }
+    }
+
+    // --- FUNGSI RENDER UTAMA ---
+    function renderBase() {
+      const root = document.getElementById('root');
+      if (currentUser) {
+        root.innerHTML = getAdminHTML();
+        renderAdminLinks();
+      } else {
+        root.innerHTML = getPublicHTML();
+      }
+    }
+
+    // --- VIEW: PUBLIC ---
+    function getPublicHTML() {
+      return `
+        <div class="min-h-screen flex flex-col selection:bg-[#800020] selection:text-white animate-fade-in">
+          <header class="bg-gradient-to-r from-[#800020] to-[#4a0011] shadow-lg border-b border-rose-900/30">
+            <div class="max-w-7xl mx-auto px-4 py-4 flex justify-between items-center">
+              <div class="flex items-center">
+                <img src="${LOGO_URL}" alt="Logo" class="w-12 h-12 object-contain bg-white rounded-full p-1 mr-4 shadow-md" />
+                <div>
+                  <h1 class="text-2xl sm:text-3xl font-extrabold text-white leading-tight">SMP Darul Madinah</h1>
+                  <p class="text-sm text-rose-200 font-medium uppercase mt-0.5">Portal Terpadu</p>
+                </div>
+              </div>
+              <button onclick="showLoginModal()" class="text-rose-100 hover:text-white bg-white/10 p-2.5 rounded-full transition">${getIcon('Lock', 20)}</button>
+            </div>
+          </header>
+
+          <main class="flex-grow max-w-7xl w-full mx-auto px-4 py-16">
+            <div class="text-center mb-16">
+              <h2 class="text-3xl md:text-5xl font-bold text-slate-800 mb-5 tracking-tight">Portal Layanan Sekolah</h2>
+              <p class="text-slate-500 max-w-2xl mx-auto text-lg leading-relaxed">Pusat akses satu pintu untuk seluruh layanan sistem informasi dan akademik.</p>
+            </div>
+
+            <div id="public-links-container" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
+              <div class="text-center py-20 text-slate-500 font-bold tracking-widest animate-pulse col-span-full">MEMUAT DATABASE...</div>
+            </div>
+          </main>
+
+          <footer class="bg-white border-t border-slate-200 pt-16 pb-8 mt-auto">
+            <div class="max-w-7xl mx-auto px-4">
+              <div class="grid grid-cols-1 md:grid-cols-3 gap-10 mb-12">
+                <div class="space-y-4">
+                  <div class="flex items-center"><img src="${LOGO_URL}" class="w-12 h-12 mr-3" /><h3 class="text-2xl font-extrabold text-[#800020]">SMP Darul Madinah</h3></div>
+                  <p class="text-slate-500 text-sm leading-relaxed">Membentuk generasi Rabbani yang berprestasi, berakhlak mulia, cerdas, dan berwawasan global di era digital.</p>
+                  <div class="flex text-slate-600 text-sm pt-2">${getIcon('MapPin', 18, 'mr-3 text-[#800020] shrink-0')} Jl. Mulya Bakti No.23B, Madiun, Jawa Timur 63139</div>
+                </div>
+                <div>
+                  <h4 class="text-lg font-bold text-slate-800 mb-5 relative">Hubungi Kami<span class="absolute bottom-0 left-0 w-1/2 h-1 bg-[#800020] rounded-full -mb-2"></span></h4>
+                  <ul class="space-y-4 text-sm text-slate-600">
+                    <li><a href="#" class="flex items-center hover:text-[#800020] group"><span class="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center mr-3 group-hover:bg-rose-50">${getIcon('Phone', 16, 'text-[#800020]')}</span> 0895-2426-3701</a></li>
+                    <li><a href="#" class="flex items-center hover:text-[#800020] group"><span class="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center mr-3 group-hover:bg-rose-50">${getIcon('Mail', 16, 'text-[#800020]')}</span> darulmadinah.sch.id</a></li>
+                  </ul>
+                </div>
+                <div>
+                  <h4 class="text-lg font-bold text-slate-800 mb-5 relative">Media Sosial<span class="absolute bottom-0 left-0 w-1/2 h-1 bg-[#800020] rounded-full -mb-2"></span></h4>
+                  <div class="flex flex-wrap gap-3">
+                    <a href="https://wa.me/6281234567890" target="_blank" class="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center text-slate-600 hover:bg-[#800020] hover:text-white transition-colors">${WA_SVG}</a>
+                    <a href="https://instagram.com/smpdarulmadinah" target="_blank" class="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center text-slate-600 hover:bg-[#800020] hover:text-white transition-colors">${getIcon('ImageIcon', 18)}</a>
+                    <a href="https://youtube.com/@smpdarulmadinah" target="_blank" class="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center text-slate-600 hover:bg-[#800020] hover:text-white transition-colors">${getIcon('Video', 18)}</a>
+                    <a href="https://tiktok.com/@smpdarulmadinah" target="_blank" class="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center text-slate-600 hover:bg-[#800020] hover:text-white transition-colors">${TIKTOK_SVG}</a>
+                  </div>
+                </div>
+              </div>
+              <div class="border-t border-slate-200 pt-8 flex justify-between text-slate-500 text-sm">
+                <div class="font-medium">&copy; ${new Date().getFullYear()} SMP Darul Madinah.</div>
+                <button onclick="showLoginModal()" class="hover:text-[#800020] flex items-center font-medium">${getIcon('Lock', 14, 'mr-1')} Login Admin</button>
+              </div>
+            </div>
+          </footer>
+          <div id="modal-container"></div>
+        </div>
+      `;
+    }
+
+    function renderPublicLinks() {
+      const container = document.getElementById('public-links-container');
+      if (!container) return;
+
+      if (appLinks.length === 0) {
+        container.innerHTML = `
+          <div class="text-center py-24 bg-white rounded-3xl border border-dashed border-slate-300 col-span-full">
+            ${getIcon('Layout', 64, 'mx-auto mb-4 text-slate-300')}
+            <p class="text-xl font-medium text-slate-500">Belum ada layanan tersedia.</p>
+          </div>
+        `;
+        return;
+      }
+
+      container.innerHTML = appLinks.map(l => `
+        <a href="${l.url}" target="${l.url !== '#' ? '_blank' : '_self'}" class="bg-white rounded-2xl p-7 shadow-sm border border-slate-100 hover:border-[#800020]/30 hover:shadow-xl transition-all duration-300 group flex flex-col hover:-translate-y-2">
+          <div class="${l.color} w-16 h-16 rounded-2xl flex items-center justify-center text-white mb-6 shadow-md group-hover:scale-110 transition-transform">
+            ${getIcon(l.iconName, 32)}
+          </div>
+          <h3 class="text-xl font-bold text-slate-800 mb-2 group-hover:text-[#800020] transition-colors">${l.title}</h3>
+          <p class="text-slate-500 text-sm flex-grow mb-6">${l.desc}</p>
+          <div class="pt-4 border-t border-slate-100 text-[#800020] text-sm font-bold flex items-center mt-auto opacity-70 group-hover:opacity-100">
+            ${getIcon('ExternalLink', 16, 'mr-1.5')} Buka Aplikasi
+          </div>
+        </a>
+      `).join('');
+    }
+
+    // --- VIEW: ADMIN ---
+    function getAdminHTML() {
+      return `
+        <div class="min-h-screen bg-slate-50 flex flex-col font-sans animate-fade-in">
+          <header class="bg-slate-900 text-white shadow-md sticky top-0 z-20">
+            <div class="max-w-7xl mx-auto px-4 h-16 flex items-center justify-between">
+              <div class="flex items-center">
+                <div class="bg-[#800020] p-1.5 rounded-lg mr-3">${getIcon('Shield', 20)}</div>
+                <h1 class="font-bold">Panel Admin Web</h1>
+              </div>
+              <button onclick="handleLogout()" class="flex items-center text-sm font-semibold hover:text-white bg-slate-800 hover:bg-rose-600 px-4 py-2 rounded-lg transition">
+                ${getIcon('LogOut', 16, 'mr-2')} Keluar
+              </button>
+            </div>
+          </header>
+
+          <div class="max-w-7xl mx-auto px-4 py-8 flex flex-col md:flex-row gap-8 w-full">
+            <nav class="w-full md:w-64 shrink-0 space-y-2">
+              <button onclick="switchAdminTab('links')" id="tab-btn-links" class="w-full flex items-center px-4 py-3.5 rounded-xl font-bold transition bg-[#800020] text-white shadow-lg">
+                ${getIcon('Layout', 20, 'mr-3')} Kelola Menu Web
+              </button>
+              <button onclick="switchAdminTab('settings')" id="tab-btn-settings" class="w-full flex items-center px-4 py-3.5 rounded-xl font-bold transition bg-white text-slate-600 border">
+                ${getIcon('Settings', 20, 'mr-3')} Ganti Password
+              </button>
+            </nav>
+
+            <main id="admin-main-content" class="flex-1 min-w-0">
+               <!-- Tabel di-render di sini -->
+            </main>
+          </div>
+          <div id="modal-container"></div>
+        </div>
+      `;
+    }
+
+    function switchAdminTab(tab) {
+      activeAdminTab = tab;
+      document.getElementById('tab-btn-links').className = `w-full flex items-center px-4 py-3.5 rounded-xl font-bold transition ${tab === 'links' ? 'bg-[#800020] text-white shadow-lg' : 'bg-white text-slate-600 border'}`;
+      document.getElementById('tab-btn-settings').className = `w-full flex items-center px-4 py-3.5 rounded-xl font-bold transition ${tab === 'settings' ? 'bg-[#800020] text-white shadow-lg' : 'bg-white text-slate-600 border'}`;
+      
+      if (tab === 'links') renderAdminLinksView();
+      else renderAdminSettingsView();
+    }
+
+    function renderAdminLinksView() {
+      document.getElementById('admin-main-content').innerHTML = `
+        <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
+          <div class="p-6 border-b flex justify-between items-center bg-slate-50/50">
+            <div><h2 class="text-xl font-extrabold text-slate-800">Daftar Tautan Web</h2></div>
+            <button onclick="openLinkForm()" class="bg-slate-900 hover:bg-[#800020] text-white px-4 py-2 rounded-xl font-bold flex items-center transition">
+              ${getIcon('Plus', 18, 'mr-2')} Tambah
+            </button>
+          </div>
+          <div class="p-4 overflow-x-auto">
+            <table class="w-full text-left border-collapse text-sm">
+              <thead><tr><th class="p-3 border-b">Ikon</th><th class="p-3 border-b">Detail Menu</th><th class="p-3 border-b text-right">Aksi</th></tr></thead>
+              <tbody id="admin-table-body"></tbody>
+            </table>
+          </div>
+        </div>
+      `;
+      renderAdminLinks();
+    }
+
+    function renderAdminLinks() {
+      const tbody = document.getElementById('admin-table-body');
+      if (!tbody) return;
+
+      if (appLinks.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="3" class="p-8 text-center text-slate-400">Data kosong</td></tr>`;
+        return;
+      }
+
+      tbody.innerHTML = appLinks.map(l => `
+        <tr class="hover:bg-slate-50">
+          <td class="p-3"><div class="${l.color} w-10 h-10 rounded-lg flex items-center justify-center text-white">${getIcon(l.iconName, 20)}</div></td>
+          <td class="p-3">
+            <p class="font-bold text-base text-slate-800">${l.title}</p>
+            <p class="text-slate-500">${l.desc}</p>
+            <p class="text-[#800020] text-xs font-mono">${l.url}</p>
+          </td>
+          <td class="p-3 text-right whitespace-nowrap">
+            <button onclick="openLinkFormById('${l.id}')" class="text-blue-500 hover:bg-blue-100 bg-blue-50 p-2.5 rounded-lg mr-2 transition">${getIcon('Edit2', 16)}</button>
+            <button onclick="requestDeleteLink('${l.id}')" class="text-red-500 hover:bg-red-100 bg-red-50 p-2.5 rounded-lg transition">${getIcon('Trash2', 16)}</button>
+          </td>
+        </tr>
+      `).join('');
+    }
+
+    function renderAdminSettingsView() {
+      document.getElementById('admin-main-content').innerHTML = `
+        <div class="bg-white rounded-2xl shadow-sm border p-6 max-w-xl">
+          <h2 class="text-xl font-extrabold text-slate-800 mb-6">Ubah Password Admin</h2>
+          <form onsubmit="changePassword(event)" class="space-y-4">
+            <div id="pass-msg" class="hidden p-3 rounded-lg text-sm font-bold"></div>
+            <div><label class="block text-sm font-bold mb-1 text-slate-700">Username Admin</label><input disabled value="${currentUser.username}" class="w-full bg-slate-100 border rounded-lg px-4 py-2.5 text-slate-500 font-medium" /></div>
+            <div><label class="block text-sm font-bold mb-1 text-slate-700">Password Saat Ini</label><input id="pass-old" type="password" required class="w-full border rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-[#800020] outline-none" /></div>
+            <hr class="my-4"/>
+            <div><label class="block text-sm font-bold mb-1 text-slate-700">Password Baru</label><input id="pass-new" type="password" required class="w-full border rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-[#800020] outline-none" /></div>
+            <div><label class="block text-sm font-bold mb-1 text-slate-700">Konfirmasi Password Baru</label><input id="pass-confirm" type="password" required class="w-full border rounded-lg px-4 py-2.5 focus:ring-2 focus:ring-[#800020] outline-none" /></div>
+            <button id="btn-pass-submit" type="submit" class="w-full bg-[#800020] hover:bg-[#5c0017] text-white font-bold py-3 rounded-xl mt-4 shadow-lg transition">Update Password</button>
+          </form>
+        </div>
+      `;
+    }
+
+    // --- MODAL: LOGIN ---
+    function showLoginModal() {
+      document.getElementById('modal-container').innerHTML = `
+        <div class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 z-50 animate-fade-in">
+          <div class="bg-white rounded-3xl w-full max-w-sm overflow-hidden shadow-2xl">
+            <div class="bg-gradient-to-br from-[#800020] to-[#4a0011] p-8 text-center">
+              ${getIcon('Shield', 56, 'text-rose-100 mx-auto mb-3')}
+              <h3 class="text-2xl font-bold text-white">Otorisasi Admin</h3>
+            </div>
+            <form onsubmit="handleLogin(event)" class="p-8 space-y-4">
+              <div id="login-error" class="hidden bg-red-50 text-red-700 p-3 rounded-xl text-sm flex items-center border border-red-100"></div>
+              <div class="relative">
+                ${getIcon('User', 18, 'absolute left-3.5 top-3.5 text-slate-400')}
+                <input id="login-user" required type="text" placeholder="Username" class="w-full pl-11 pr-4 py-2.5 bg-slate-50 border rounded-xl focus:ring-2 focus:ring-[#800020] outline-none" />
+              </div>
+              <div class="relative">
+                ${getIcon('Key', 18, 'absolute left-3.5 top-3.5 text-slate-400')}
+                <input id="login-pass" required type="password" placeholder="Password" class="w-full pl-11 pr-4 py-2.5 bg-slate-50 border rounded-xl focus:ring-2 focus:ring-[#800020] outline-none" />
+              </div>
+              <div class="pt-2 flex gap-3">
+                <button type="button" onclick="hideModal()" class="flex-1 py-2.5 rounded-xl text-slate-600 font-bold hover:bg-slate-100 transition">Batal</button>
+                <button id="btn-login-submit" type="submit" class="flex-1 bg-[#800020] hover:bg-[#5c0017] text-white rounded-xl font-bold transition shadow-lg shadow-rose-900/20">Login</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      `;
+    }
+
+    // --- MODAL: LINK FORM ---
+    function openLinkFormById(id) {
+      const link = appLinks.find(l => l.id == id);
+      openLinkForm(link);
+    }
+
+    function openLinkForm(linkObj = null) {
+      currentLinkForm = linkObj || { id: null, title: '', url: '', desc: '', iconName: 'LinkIcon', color: 'bg-slate-800' };
+      renderLinkFormModal();
+    }
+
+    function renderLinkFormModal() {
+      document.getElementById('modal-container').innerHTML = `
+        <div class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 z-50 animate-fade-in">
+          <div class="bg-white rounded-3xl shadow-xl w-full max-w-xl overflow-hidden flex flex-col max-h-[90vh]">
+            <div class="p-6 border-b flex justify-between bg-slate-50">
+              <h3 class="text-xl font-bold flex items-center">${getIcon('Settings', 20, 'mr-2 text-[#800020]')} Form Tautan Web</h3>
+              <button onclick="hideModal()" class="text-slate-400 hover:text-red-500 transition">${getIcon('X', 24)}</button>
+            </div>
+            <form onsubmit="saveLink(event)" class="p-6 overflow-y-auto space-y-4 custom-scroll">
+              <div><label class="block font-bold mb-1 text-sm text-slate-700">Judul Tautan</label><input id="lf-title" required value="${currentLinkForm.title}" class="w-full border rounded-xl px-4 py-2.5 outline-none focus:ring-2 focus:ring-[#800020] bg-slate-50"/></div>
+              <div><label class="block font-bold mb-1 text-sm text-slate-700">URL Tujuan (https://...)</label><input id="lf-url" required value="${currentLinkForm.url}" class="w-full border rounded-xl px-4 py-2.5 outline-none focus:ring-2 focus:ring-[#800020] bg-slate-50 font-mono text-sm"/></div>
+              <div><label class="block font-bold mb-1 text-sm text-slate-700">Deskripsi Singkat</label><input id="lf-desc" required value="${currentLinkForm.desc}" class="w-full border rounded-xl px-4 py-2.5 outline-none focus:ring-2 focus:ring-[#800020] bg-slate-50"/></div>
+              
+              <div class="grid grid-cols-2 gap-4 pt-2">
+                <div>
+                  <label class="block font-bold mb-2 text-sm text-slate-700">Pilih Ikon</label>
+                  <div class="grid grid-cols-4 gap-2">
+                    ${Object.keys(SVG_PATHS).map(k => `
+                      <button type="button" onclick="updateLinkForm('iconName', '${k}')" class="p-2.5 rounded-xl border flex justify-center transition-all ${currentLinkForm.iconName===k?'bg-rose-50 border-[#800020] text-[#800020] shadow-sm':'text-slate-500 hover:bg-slate-50'}">
+                        ${getIcon(k, 20)}
+                      </button>
+                    `).join('')}
+                  </div>
+                </div>
+                <div>
+                  <label class="block font-bold mb-2 text-sm text-slate-700">Pilih Warna Dasar</label>
+                  <div class="grid grid-cols-4 gap-2">
+                    ${COLOR_OPTIONS.map(c => `
+                      <button type="button" onclick="updateLinkForm('color', '${c}')" class="aspect-square rounded-xl ${c} flex items-center justify-center border-2 transition-all ${currentLinkForm.color===c?'border-slate-900 scale-110':'border-transparent hover:scale-105 hover:shadow-sm'}">
+                        ${currentLinkForm.color===c ? getIcon('CheckCircle', 16, 'text-white') : ''}
+                      </button>
+                    `).join('')}
+                  </div>
+                </div>
+              </div>
+              <button id="lf-submit" type="submit" class="w-full mt-6 bg-[#800020] hover:bg-[#5c0017] text-white py-3.5 rounded-xl font-bold shadow-lg transition">Simpan Konfigurasi</button>
+            </form>
+          </div>
+        </div>
+      `;
+    }
+
+    function updateLinkForm(field, value) {
+      currentLinkForm.title = document.getElementById('lf-title').value;
+      currentLinkForm.url = document.getElementById('lf-url').value;
+      currentLinkForm.desc = document.getElementById('lf-desc').value;
+      currentLinkForm[field] = value;
+      renderLinkFormModal();
+    }
+
+    // --- MODAL: ALERT & CONFIRM ---
+    function hideModal() {
+      document.getElementById('modal-container').innerHTML = '';
+    }
+
+    function customAlert(title, text) {
+      document.getElementById('modal-container').innerHTML = `
+        <div class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 z-[100] animate-fade-in">
+          <div class="bg-white rounded-2xl w-full max-w-sm overflow-hidden shadow-2xl p-6">
+            <h4 class="text-lg font-bold text-slate-800 flex items-center mb-2 text-[#800020]">${getIcon('AlertCircle', 20, 'mr-2')}${title}</h4>
+            <p class="text-slate-600 text-sm leading-relaxed">${text}</p>
+            <button onclick="hideModal()" class="mt-6 w-full bg-[#800020] hover:bg-[#5c0017] text-white font-bold py-2.5 rounded-xl transition">Mengerti</button>
+          </div>
+        </div>
+      `;
+    }
+
+    function customConfirm(text, callback) {
+      confirmCallback = callback;
+      document.getElementById('modal-container').innerHTML = `
+        <div class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center p-4 z-[100] animate-fade-in">
+          <div class="bg-white rounded-2xl w-full max-w-sm overflow-hidden shadow-2xl p-6">
+            <h4 class="text-lg font-bold text-slate-800 flex items-center mb-2 text-rose-700">${getIcon('AlertCircle', 20, 'mr-2')} Konfirmasi</h4>
+            <p class="text-slate-600 text-sm leading-relaxed">${text}</p>
+            <div class="mt-6 flex gap-3">
+              <button onclick="hideModal()" class="flex-1 bg-slate-100 hover:bg-slate-200 text-slate-700 py-2.5 rounded-xl font-bold transition">Batal</button>
+              <button onclick="executeConfirm()" class="flex-1 bg-[#800020] hover:bg-[#5c0017] text-white py-2.5 rounded-xl font-bold transition shadow-md">Ya, Lanjutkan</button>
+            </div>
+          </div>
+        </div>
+      `;
+    }
+
+    function executeConfirm() {
+      if (confirmCallback) confirmCallback();
+    }
+
+    // --- LOGIC: ACTION HANDLERS ---
+    async function handleLogin(e) {
+      e.preventDefault();
+      const user = document.getElementById('login-user').value;
+      const pass = document.getElementById('login-pass').value;
+      const btn = document.getElementById('btn-login-submit');
+      const errDiv = document.getElementById('login-error');
+      
+      btn.disabled = true; btn.innerText = 'Cek...';
+      errDiv.classList.add('hidden');
+
+      try {
+        const res = await fetch(GAS_URL, { method: "POST", body: JSON.stringify({ action: 'login', username: user, password: pass }) });
+        const data = await res.json();
+        if (data.status === 'success' && data.user.role === 'admin') {
+          currentUser = data.user;
+          localStorage.setItem('smp_darul_madinah_admin', JSON.stringify(data.user));
+          hideModal();
+          renderBase(); 
+        } else {
+          errDiv.innerHTML = `${getIcon('AlertCircle', 16, 'mr-2 flex-shrink-0')} Kredensial salah atau bukan Admin.`;
+          errDiv.classList.remove('hidden');
+        }
+      } catch (e) {
+        errDiv.innerHTML = `${getIcon('AlertCircle', 16, 'mr-2 flex-shrink-0')} Gagal terhubung server. Cek link Web App GAS Anda.`;
+        errDiv.classList.remove('hidden');
+      }
+      btn.disabled = false; btn.innerText = 'Login';
+    }
+
+    function handleLogout() {
+      currentUser = null;
+      localStorage.removeItem('smp_darul_madinah_admin');
+      activeAdminTab = 'links';
+      renderBase();
+    }
+
+    async function changePassword(e) {
+      e.preventDefault();
+      const oldP = document.getElementById('pass-old').value;
+      const newP = document.getElementById('pass-new').value;
+      const confP = document.getElementById('pass-confirm').value;
+      const msg = document.getElementById('pass-msg');
+      const btn = document.getElementById('btn-pass-submit');
+
+      const showMsg = (text, type) => {
+        msg.className = `p-3 rounded-lg text-sm font-bold border ${type === 'err' ? 'bg-red-50 text-red-700 border-red-100' : 'bg-emerald-50 text-emerald-700 border-emerald-100'}`;
+        msg.innerHTML = `${getIcon(type === 'err' ? 'AlertCircle' : 'CheckCircle', 18, 'mr-2 inline-block -mt-1')} ${text}`;
+        msg.classList.remove('hidden');
+        setTimeout(() => msg.classList.add('hidden'), 4000);
+      };
+
+      if (newP !== confP) return showMsg('Konfirmasi tidak cocok!', 'err');
+      if (newP.length < 5) return showMsg('Minimal 5 karakter!', 'err');
+
+      btn.disabled = true; btn.innerText = 'Menyimpan...';
+
+      try {
+        const verify = await fetch(GAS_URL, { method: "POST", body: JSON.stringify({ action: 'login', username: currentUser.username, password: oldP }) }).then(r=>r.json());
+        if (verify.status !== 'success') throw new Error('Password lama salah!');
+        
+        await fetch(GAS_URL, { method: "POST", body: JSON.stringify({ action: 'saveUser', username: currentUser.username, password: newP, role: 'admin' }) });
+        
+        showMsg('Berhasil diubah!', 'success');
+        document.getElementById('pass-old').value = ''; document.getElementById('pass-new').value = ''; document.getElementById('pass-confirm').value = '';
+      } catch (error) {
+        showMsg(error.message || 'Gagal menyimpan.', 'err');
+      }
+      btn.disabled = false; btn.innerText = 'Update Password';
+    }
+
+    async function saveLink(e) {
+      e.preventDefault();
+      currentLinkForm.title = document.getElementById('lf-title').value;
+      currentLinkForm.url = document.getElementById('lf-url').value;
+      currentLinkForm.desc = document.getElementById('lf-desc').value;
+      
+      const btn = document.getElementById('lf-submit');
+      btn.disabled = true; btn.innerText = 'Menyimpan...';
+
+      const isEdit = !!currentLinkForm.id;
+      const payload = isEdit ? currentLinkForm : { ...currentLinkForm, id: Date.now().toString() };
+      
+      try {
+        await fetch(GAS_URL, { method: 'POST', body: JSON.stringify({ action: 'saveLink', link: payload }) });
+        if (isEdit) {
+          appLinks = appLinks.map(l => l.id == payload.id ? payload : l);
+        } else {
+          appLinks.push(payload);
+        }
+        hideModal();
+        renderAdminLinks();
+      } catch (e) {
+        customAlert("Error", "Gagal menyimpan tautan.");
+      }
+      btn.disabled = false;
+    }
+
+    function requestDeleteLink(id) {
+      customConfirm("Apakah Anda yakin ingin menghapus permanen tautan menu ini?", () => executeDeleteLink(id));
+    }
+
+    async function executeDeleteLink(id) {
+      hideModal(); 
+      try {
+        await fetch(GAS_URL, { method: 'POST', body: JSON.stringify({ action: 'deleteLink', id }) });
+        appLinks = appLinks.filter(l => l.id != id);
+        renderAdminLinks();
+      } catch (e) {
+        customAlert("Error", "Gagal menghapus tautan dari server.");
+      }
+    }
+  </script>
+</body>
+</html>
