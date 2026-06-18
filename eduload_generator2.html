@@ -57,7 +57,7 @@
     <nav class="bg-emerald-700 text-white shadow-md">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex flex-col md:flex-row justify-between items-center gap-4">
             <div class="flex items-center space-x-3">
-                <i class="fas fa-chart-pie text-2xl text-emerald-100"></i>
+                <i class="fas fa-file-excel text-2xl text-emerald-100"></i>
                 <div>
                     <h1 class="font-extrabold text-xl leading-tight tracking-wide">EduLoad Analytics</h1>
                     <p class="text-xs text-emerald-200 font-medium">Sistem Pemetaan & Analisis Beban Kerja Guru | SMP Darul Madinah</p>
@@ -69,7 +69,7 @@
                 <div class="bg-emerald-800/60 px-3.5 py-1.5 rounded-lg border border-emerald-600/50 text-xs">
                     <span id="cloudStatus" class="inline-flex items-center">
                         <span class="w-2 h-2 mr-2 bg-amber-400 rounded-full animate-pulse"></span>
-                        Menghubungkan ke Cloud...
+                        Menghubungkan ke Google Sheets...
                     </span>
                 </div>
             </div>
@@ -93,7 +93,7 @@
                 <button onclick="openClassModal()" class="bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-bold px-3 py-1.5 rounded-lg border border-indigo-200 transition flex items-center gap-1.5 shadow-sm">
                     <i class="fas fa-folder-plus text-indigo-600"></i> Kelola Rombel/Kelas
                 </button>
-                <div id="quickFilterWrapper" class="hidden md:flex items-center space-x-2">
+                <div id="quickFilterWrapper" class="flex items-center space-x-2">
                     <select id="viewFilter" onchange="renderTable()" class="bg-slate-50 border border-slate-300 rounded-lg px-2 py-1.5 text-slate-700 font-medium focus:ring-1 focus:ring-emerald-500">
                         <option value="all">Semua Mapel (Murni & Administrasi)</option>
                         <option value="riil">Hanya Mapel Riil Diajarkan</option>
@@ -112,15 +112,15 @@
             
             <div class="w-full lg:w-1/3 flex flex-col gap-4">
                 
-                <!-- Cloud Info & User ID Card -->
+                <!-- Cloud Info Card -->
                 <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-4">
                     <h3 class="text-xs font-bold text-slate-700 flex items-center mb-2">
                         <i class="fas fa-cloud text-emerald-600 mr-1.5"></i>
-                        Firebase Cloud (SMP Darul Madinah Madiun)
+                        Koneksi Google Sheets Aktif
                     </h3>
                     <div class="bg-slate-50 rounded-lg p-2.5 border border-slate-200">
-                        <span class="block text-[9px] uppercase font-bold text-slate-400 tracking-wider">User ID Unik Browser Anda:</span>
-                        <span id="userIdDisplay" class="font-mono text-[11px] text-slate-700 break-all select-all block mt-0.5 font-semibold">Memuat...</span>
+                        <span class="block text-[9px] uppercase font-bold text-slate-400 tracking-wider">Sumber Database Anda:</span>
+                        <span class="font-mono text-[11px] text-slate-600 break-all block mt-0.5 font-semibold">Google Spreadsheet (via Apps Script)</span>
                     </div>
                 </div>
 
@@ -389,277 +389,19 @@
     </div>
 
     <!-- MAIN APP SCRIPT -->
-    <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-        import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
-        import { getFirestore, doc, setDoc, deleteDoc, onSnapshot, collection } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+    <script>
+        // TAUTAN GOOGLE APPS SCRIPT ASLI MILIK SMP DARUL MADINAH (Tersinkronisasi)
+        const GAS_URL = "https://script.google.com/macros/s/AKfycbypWPZapMACbF1IrO9t92wBu3cCKyAP3jU7b_5_S3EpkMVpTm37yBI-LdS2zS7QLVBM/exec";
 
         // Global State variables
         let teachers = [];
         let classes = ['VII', 'VIII', 'IX']; // Default rombel list
         let editingTeacherId = null;
-        let auth, db;
-        let userId = null;
         let teachersChartInstance = null;
         let ratioChartInstance = null;
         let activeConfirmCallback = null;
-        const appId = 'edu-load-generator';
 
-        // Konfigurasi Resmi Firebase SMP Darul Madinah Madiun (Sinkronisasi Sempurna)
-        const firebaseConfig = {
-            apiKey: "AIzaSyCa8wOGJ52lQqJp6JkGDwPNIy_FURgRgqM",
-            authDomain: "smp-darul-madinah.firebaseapp.com",
-            projectId: "smp-darul-madinah",
-            storageBucket: "smp-darul-madinah.firebasestorage.app",
-            messagingSenderId: "729642373759",
-            appId: "1:729642373759:web:01d9c403ddfcafac5b254a",
-            measurementId: "G-WS4NTB2ZQ4"
-        };
-
-        // Initialize Firebase
-        async function initFirebase() {
-            try {
-                const app = initializeApp(firebaseConfig);
-                db = getFirestore(app);
-                auth = getAuth(app);
-
-                const credentials = await signInAnonymously(auth);
-                const user = credentials.user;
-
-                if (user) {
-                    userId = user.uid;
-                    document.getElementById('cloudStatus').innerHTML = `
-                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-emerald-100 text-emerald-800">
-                            <span class="w-1.5 h-1.5 mr-1.5 bg-emerald-500 rounded-full animate-ping"></span>
-                            Terhubung ke Cloud
-                        </span>
-                    `;
-                    document.getElementById('userIdDisplay').textContent = userId;
-
-                    // Real-time listener for Classes/Rombel
-                    const configDocRef = doc(db, 'artifacts', appId, 'users', userId, 'config', 'classes');
-                    onSnapshot(configDocRef, (docSnap) => {
-                        if (docSnap.exists()) {
-                            classes = docSnap.data().list || ['VII', 'VIII', 'IX'];
-                        } else {
-                            classes = ['VII', 'VIII', 'IX'];
-                        }
-                        renderClassManagementUI();
-                        renderTable();
-                        resetForm();
-                    }, (err) => {
-                        console.error("Classes config error:", err);
-                    });
-
-                    // Real-time listener for Firestore
-                    const colPath = collection(db, 'artifacts', appId, 'users', userId, 'teachers');
-                    onSnapshot(colPath, (snapshot) => {
-                        teachers = [];
-                        snapshot.forEach((doc) => {
-                            teachers.push({ id: doc.id, ...doc.data() });
-                        });
-                        // Alphabetical sort (A-Z)
-                        teachers.sort((a, b) => a.name.localeCompare(b.name, 'id', { sensitivity: 'base' }));
-                        renderTable();
-                        updateDashboard();
-                    }, (error) => {
-                        console.error("Firestore loading error:", error);
-                        showToast("Error sinkronisasi database cloud.", "error");
-                    });
-                }
-            } catch (err) {
-                console.error("Firebase Initialization failed:", err);
-                
-                // Memberikan pesan error yang sangat mendetail sesuai kenyataan di layar
-                let friendlyError = "Offline (Demo Mode)";
-                if (err.code) {
-                    if (err.code === "auth/operation-not-allowed") {
-                        friendlyError = "Offline (Error: Aktifkan Anonymous Auth di Firebase Console!)";
-                    } else if (err.code === "permission-denied") {
-                        friendlyError = "Offline (Error: Periksa Aturan Keamanan / Rules Firestore Anda!)";
-                    } else {
-                        friendlyError = `Offline (Error: ${err.code})`;
-                    }
-                } else if (err.message && err.message.includes("network")) {
-                    friendlyError = "Offline (Koneksi Internet Terganggu)";
-                }
-
-                document.getElementById('cloudStatus').innerHTML = `
-                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-rose-100 text-rose-800" title="${err.message || 'Error'}">
-                        <span class="w-1.5 h-1.5 mr-1.5 bg-rose-500 rounded-full"></span>
-                        ${friendlyError}
-                    </span>
-                `;
-                document.getElementById('userIdDisplay').textContent = "Demo-Mode-No-Sync";
-                loadSampleData();
-            }
-        }
-
-        function loadSampleData() {
-            classes = ['VII', 'VIII', 'IX'];
-            teachers = [
-                {
-                    id: "sample-1",
-                    name: "Abu Bakar Hanafiy, S.Pd",
-                    subjects: [
-                        { name: "Nahwu Shorof", classLoads: { "VII": 2, "VIII": 2, "IX": 2 }, status: "riil" },
-                        { name: "Imla’", classLoads: { "VII": 1, "VIII": 1, "IX": 1 }, status: "admin" },
-                        { name: "PJOK", classLoads: { "VII": 2, "VIII": 2, "IX": 2 }, status: "riil" }
-                    ],
-                    tasks: []
-                },
-                {
-                    id: "sample-2",
-                    name: "A. Hebni M.PdI",
-                    subjects: [
-                        { name: "Fiqih", classLoads: { "VII": 2, "VIII": 2, "IX": 2 }, status: "riil" }
-                    ],
-                    tasks: [
-                        { name: "Kepala Perpus", jp: 12 }
-                    ]
-                },
-                {
-                    id: "sample-3",
-                    name: "Asngari, S.Ag",
-                    subjects: [
-                        { name: "Siroh", classLoads: { "VII": 2, "VIII": 2, "IX": 2 }, status: "riil" },
-                        { name: "Prakarya", classLoads: { "VII": 0, "VIII": 2, "IX": 2 }, status: "riil" }
-                    ],
-                    tasks: []
-                },
-                {
-                    id: "sample-4",
-                    name: "Imam Sudjatmiko, S.T.",
-                    subjects: [
-                        { name: "Informatika", classLoads: { "VII": 2, "VIII": 2, "IX": 2 }, status: "riil" },
-                        { name: "Prakarya", classLoads: { "VII": 2, "VIII": 0, "IX": 0 }, status: "riil" }
-                    ],
-                    tasks: [
-                        { name: "Kepala Lab", jp: 12 }
-                    ]
-                },
-                {
-                    id: "sample-5",
-                    name: "Ijoek B Lindun, S.Pd",
-                    subjects: [
-                        { name: "Bahasa Inggris", classLoads: { "VII": 0, "VIII": 4, "IX": 0 }, status: "riil" }
-                    ],
-                    tasks: []
-                },
-                {
-                    id: "sample-6",
-                    name: "Shinta Muliya Sari, S.Pd",
-                    subjects: [
-                        { name: "Bahasa Indonesia", classLoads: { "VII": 4, "VIII": 4, "IX": 4 }, status: "riil" }
-                    ],
-                    tasks: [
-                        { name: "Wakakes", jp: 12 }
-                    ]
-                },
-                {
-                    id: "sample-7",
-                    name: "Anis Arzia Muntiani, S.Pd",
-                    subjects: [
-                        { name: "IPA", classLoads: { "VII": 4, "VIII": 4, "IX": 4 }, status: "riil" }
-                    ],
-                    tasks: [
-                        { name: "PJ Lab IPA", jp: 2 },
-                        { name: "Walas", jp: 2 }
-                    ]
-                },
-                {
-                    id: "sample-8",
-                    name: "Siti Rukanah",
-                    subjects: [],
-                    tasks: [
-                        { name: "Ekstra Memasak/Menjahit", jp: 2 }
-                    ]
-                },
-                {
-                    id: "sample-9",
-                    name: "Siti Utami, S.Pd",
-                    subjects: [
-                        { name: "Bahasa Inggris", classLoads: { "VII": 0, "VIII": 0, "IX": 4 }, status: "riil" },
-                        { name: "Bahasa Jawa", classLoads: { "VII": 2, "VIII": 2, "IX": 0 }, status: "admin" }
-                    ],
-                    tasks: [
-                        { name: "Kepala Sekolah (24 JP)", jp: 24 }
-                    ]
-                },
-                {
-                    id: "sample-10",
-                    name: "Pita Nirmalasari, S.Pd",
-                    subjects: [
-                        { name: "Matematika", classLoads: { "VII": 4, "VIII": 4, "IX": 4 }, status: "riil" }
-                    ],
-                    tasks: [
-                        { name: "Walas", jp: 2 }
-                    ]
-                },
-                {
-                    id: "sample-11",
-                    name: "Hilal Bay Ibnu Jihad, S.Pd",
-                    subjects: [
-                        { name: "Bahasa Arab", classLoads: { "VII": 4, "VIII": 4, "IX": 4 }, status: "riil" },
-                        { name: "Bahasa Jawa", classLoads: { "VII": 0, "VIII": 0, "IX": 2 }, status: "riil" }
-                    ],
-                    tasks: [
-                        { name: "Wakakur", jp: 12 }
-                    ]
-                },
-                {
-                    id: "sample-12",
-                    name: "Erika Ulfah Anggraini, S.Pd",
-                    subjects: [
-                        { name: "Akidah", classLoads: { "VII": 2, "VIII": 2, "IX": 2 }, status: "riil" },
-                        { name: "Akhlak", classLoads: { "VII": 2, "VIII": 2, "IX": 2 }, status: "riil" },
-                        { name: "Pendidikan Pancasila", classLoads: { "VII": 2, "VIII": 2, "IX": 2 }, status: "riil" }
-                    ],
-                    tasks: [
-                        { name: "walas", jp: 2 }
-                    ]
-                },
-                {
-                    id: "sample-13",
-                    name: "Etik Listiyani, S.Pd",
-                    subjects: [
-                        { name: "Bahasa Inggris", classLoads: { "VII": 4, "VIII": 0, "IX": 0 }, status: "riil" },
-                        { name: "IPS", classLoads: { "VII": 2, "VIII": 2, "IX": 2 }, status: "riil" }
-                    ],
-                    tasks: [
-                        { name: "Tata Usaha", jp: 10 }
-                    ]
-                },
-                {
-                    id: "sample-14",
-                    name: "Siti Fatimah, S.Pi",
-                    subjects: [],
-                    tasks: [
-                        { name: "Bendahara Sekolah", jp: 0 }
-                    ]
-                },
-                {
-                    id: "sample-15",
-                    name: "Sunyoto",
-                    subjects: [],
-                    tasks: [
-                        { name: "Petugas Kebersihan", jp: 0 }
-                    ]
-                }
-            ];
-            teachers.sort((a, b) => a.name.localeCompare(b.name, 'id', { sensitivity: 'base' }));
-            renderClassManagementUI();
-            renderTable();
-            updateDashboard();
-        }
-
-        // Initial setup
-        window.onload = function() {
-            initFirebase();
-            resetForm();
-        };
-
-        // CUSTOM CONFIRM MODAL SYSTEM
+        // Custom Confirm Modal System
         window.openConfirmModal = function(message, onConfirm) {
             document.getElementById('confirmModalMessage').textContent = message;
             document.getElementById('customConfirmModal').classList.remove('hidden');
@@ -677,6 +419,252 @@
             }
             closeConfirmModal();
         });
+
+        // Initialize Google Sheets Sync
+        async function initGoogleSheets() {
+            try {
+                // Ambil daftar kelas dari localStorage jika ada kustomisasi lokal
+                const savedClasses = localStorage.getItem('smpdm_classes');
+                if (savedClasses) {
+                    classes = JSON.parse(savedClasses);
+                }
+
+                document.getElementById('cloudStatus').innerHTML = `
+                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-amber-100 text-amber-800">
+                        <span class="w-1.5 h-1.5 mr-1.5 bg-amber-500 rounded-full animate-ping"></span>
+                        Mengunduh Data Cloud...
+                    </span>
+                `;
+
+                // Tarik data dari Google Sheet
+                await fetchTeachersFromSheet();
+                
+                document.getElementById('cloudStatus').innerHTML = `
+                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-emerald-100 text-emerald-800">
+                        <span class="w-1.5 h-1.5 mr-1.5 bg-emerald-500 rounded-full"></span>
+                        Terhubung ke Google Sheets
+                    </span>
+                `;
+            } catch (err) {
+                console.error("Gagal terhubung ke GAS:", err);
+                document.getElementById('cloudStatus').innerHTML = `
+                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-rose-100 text-rose-800">
+                        <span class="w-1.5 h-1.5 mr-1.5 bg-rose-500 rounded-full"></span>
+                        Offline (Gunakan Mode Lokal)
+                    </span>
+                `;
+                loadSampleData();
+            }
+        }
+
+        // Ambil Data dari Google Sheets
+        async function fetchTeachersFromSheet() {
+            try {
+                const response = await fetch(GAS_URL);
+                const data = await response.json();
+                if (Array.isArray(data) && data.length > 0) {
+                    teachers = data;
+                } else {
+                    // Jika Sheet kosong, isi dengan data contoh awal sesuai screenshot
+                    loadSampleData();
+                    await saveAllSampleToSheet();
+                }
+                teachers.sort((a, b) => a.name.localeCompare(b.name, 'id', { sensitivity: 'base' }));
+                renderTable();
+                updateDashboard();
+            } catch (error) {
+                throw error;
+            }
+        }
+
+        // Kirim Data Aksi ke Google Sheets (Save/Delete/Clear)
+        async function sendActionToSheet(action, payload = {}) {
+            try {
+                const response = await fetch(GAS_URL, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'text/plain', // Mencegah preflight CORS block di Google Script
+                    },
+                    body: JSON.stringify({ action, ...payload })
+                });
+                return await response.json();
+            } catch (error) {
+                console.error("Koneksi kirim gagal:", error);
+                showToast("Perubahan disimpan lokal (Gagal sync ke Cloud)", "error");
+            }
+        }
+
+        // Backup Bulk Upload jika Sheet Kosong
+        async function saveAllSampleToSheet() {
+            for (let t of teachers) {
+                await sendActionToSheet('save', {
+                    id: t.id,
+                    name: t.name,
+                    subjects: t.subjects,
+                    tasks: t.tasks
+                });
+            }
+        }
+
+        // Muat Data Contoh Sesuai Persis dengan Screenshot Tabel Sekolah
+        function loadSampleData() {
+            teachers = [
+                {
+                    id: "t-1",
+                    name: "Abu Bakar Hanafiy, S.Pd",
+                    subjects: [
+                        { name: "Nahwu Shorof", classLoads: { "VII": 2, "VIII": 2, "IX": 2 }, status: "riil" },
+                        { name: "Imla’", classLoads: { "VII": 1, "VIII": 1, "IX": 1 }, status: "admin" },
+                        { name: "PJOK", classLoads: { "VII": 2, "VIII": 2, "IX": 2 }, status: "riil" }
+                    ],
+                    tasks: []
+                },
+                {
+                    id: "t-2",
+                    name: "A. Hebni M.PdI",
+                    subjects: [
+                        { name: "Fiqih", classLoads: { "VII": 2, "VIII": 2, "IX": 2 }, status: "riil" }
+                    ],
+                    tasks: [
+                        { name: "Kepala Perpus", jp: 12 }
+                    ]
+                },
+                {
+                    id: "t-3",
+                    name: "Asngari, S.Ag",
+                    subjects: [
+                        { name: "Siroh", classLoads: { "VII": 2, "VIII": 2, "IX": 2 }, status: "riil" },
+                        { name: "Prakarya", classLoads: { "VII": 0, "VIII": 2, "IX": 2 }, status: "riil" }
+                    ],
+                    tasks: []
+                },
+                {
+                    id: "t-4",
+                    name: "Imam Sudjatmiko, S.T.",
+                    subjects: [
+                        { name: "Informatika", classLoads: { "VII": 2, "VIII": 2, "IX": 2 }, status: "riil" },
+                        { name: "Prakarya", classLoads: { "VII": 2, "VIII": 0, "IX": 0 }, status: "riil" }
+                    ],
+                    tasks: [
+                        { name: "Kepala Lab", jp: 12 }
+                    ]
+                },
+                {
+                    id: "t-5",
+                    name: "Ijoek B Lindun, S.Pd",
+                    subjects: [
+                        { name: "Bahasa Inggris", classLoads: { "VII": 0, "VIII": 4, "IX": 0 }, status: "riil" }
+                    ],
+                    tasks: []
+                },
+                {
+                    id: "t-6",
+                    name: "Shinta Muliya Sari, S.Pd",
+                    subjects: [
+                        { name: "Bahasa Indonesia", classLoads: { "VII": 4, "VIII": 4, "IX": 4 }, status: "riil" }
+                    ],
+                    tasks: [
+                        { name: "Wakakes", jp: 12 }
+                    ]
+                },
+                {
+                    id: "t-7",
+                    name: "Anis Arzia Muntiani, S.Pd",
+                    subjects: [
+                        { name: "IPA", classLoads: { "VII": 4, "VIII": 4, "IX": 4 }, status: "riil" }
+                    ],
+                    tasks: [
+                        { name: "PJ Lab IPA", jp: 2 },
+                        { name: "Walas", jp: 2 }
+                    ]
+                },
+                {
+                    id: "t-8",
+                    name: "Siti Rukanah",
+                    subjects: [],
+                    tasks: [
+                        { name: "Ekstra Memasak/Menjahit", jp: 2 }
+                    ]
+                },
+                {
+                    id: "t-9",
+                    name: "Siti Utami, S.Pd",
+                    subjects: [
+                        { name: "Bahasa Inggris", classLoads: { "VII": 0, "VIII": 0, "IX": 4 }, status: "riil" },
+                        { name: "Bahasa Jawa", classLoads: { "VII": 2, "VIII": 2, "IX": 0 }, status: "admin" }
+                    ],
+                    tasks: [
+                        { name: "Kepala Sekolah (24 JP)", jp: 24 }
+                    ]
+                },
+                {
+                    id: "t-10",
+                    name: "Pita Nirmalasari, S.Pd",
+                    subjects: [
+                        { name: "Matematika", classLoads: { "VII": 4, "VIII": 4, "IX": 4 }, status: "riil" }
+                    ],
+                    tasks: [
+                        { name: "Walas", jp: 2 }
+                    ]
+                },
+                {
+                    id: "t-11",
+                    name: "Hilal Bay Ibnu Jihad, S.Pd",
+                    subjects: [
+                        { name: "Bahasa Arab", classLoads: { "VII": 4, "VIII": 4, "IX": 4 }, status: "riil" },
+                        { name: "Bahasa Jawa", classLoads: { "VII": 0, "VIII": 0, "IX": 2 }, status: "riil" }
+                    ],
+                    tasks: [
+                        { name: "Wakakur", jp: 12 }
+                    ]
+                },
+                {
+                    id: "t-12",
+                    name: "Erika Ulfah Anggraini, S.Pd",
+                    subjects: [
+                        { name: "Akidah", classLoads: { "VII": 2, "VIII": 2, "IX": 2 }, status: "riil" },
+                        { name: "Akhlak", classLoads: { "VII": 2, "VIII": 2, "IX": 2 }, status: "riil" },
+                        { name: "Pendidikan Pancasila", classLoads: { "VII": 2, "VIII": 2, "IX": 2 }, status: "riil" }
+                    ],
+                    tasks: [
+                        { name: "walas", jp: 2 }
+                    ]
+                },
+                {
+                    id: "t-13",
+                    name: "Etik Listiyani, S.Pd",
+                    subjects: [
+                        { name: "Bahasa Inggris", classLoads: { "VII": 4, "VIII": 0, "IX": 0 }, status: "riil" },
+                        { name: "IPS", classLoads: { "VII": 2, "VIII": 2, "IX": 2 }, status: "riil" }
+                    ],
+                    tasks: [
+                        { name: "Tata Usaha", jp: 10 }
+                    ]
+                },
+                {
+                    id: "t-14",
+                    name: "Siti Fatimah, S.Pi",
+                    subjects: [],
+                    tasks: [
+                        { name: "Bendahara Sekolah", jp: 0 }
+                    ]
+                },
+                {
+                    id: "t-15",
+                    name: "Sunyoto",
+                    subjects: [],
+                    tasks: [
+                        { name: "Petugas Kebersihan", jp: 0 }
+                    ]
+                }
+            ];
+            teachers.sort((a, b) => a.name.localeCompare(b.name, 'id', { sensitivity: 'base' }));
+        }
+
+        window.onload = function() {
+            initGoogleSheets();
+            resetForm();
+        };
 
         // UI Tab Management
         window.switchTab = function(tabId) {
@@ -728,7 +716,7 @@
             });
         }
 
-        window.addNewClass = async function() {
+        window.addNewClass = function() {
             const input = document.getElementById('newClassName');
             const newName = input.value.trim();
             if (!newName) return;
@@ -738,10 +726,10 @@
             }
             classes.push(newName);
             input.value = '';
-            await saveClassesConfig();
+            saveClassesConfig();
         }
 
-        window.renameClass = async function(idx, newName) {
+        window.renameClass = function(idx, newName) {
             newName = newName.trim();
             if (!newName) return;
             const oldName = classes[idx];
@@ -753,7 +741,7 @@
             }
             classes[idx] = newName;
 
-            // Migrate teachers data inside this class
+            // Pindahkan beban kelas guru ke nama kelas baru
             teachers.forEach(t => {
                 t.subjects.forEach(sub => {
                     if (sub.classLoads && sub.classLoads[oldName] !== undefined) {
@@ -763,14 +751,7 @@
                 });
             });
 
-            await saveClassesConfig();
-            // Bulk update teachers in database if synced
-            if (db && userId) {
-                for (let t of teachers) {
-                    const docRef = doc(db, 'artifacts', appId, 'users', userId, 'teachers', t.id);
-                    await setDoc(docRef, t);
-                }
-            }
+            saveClassesConfig();
             showToast("Nama Rombel berhasil diubah!");
         }
 
@@ -792,31 +773,16 @@
                     });
                 });
 
-                await saveClassesConfig();
-                // Bulk update teachers in database if synced
-                if (db && userId) {
-                    for (let t of teachers) {
-                        const docRef = doc(db, 'artifacts', appId, 'users', userId, 'teachers', t.id);
-                        await setDoc(docRef, t);
-                    }
-                }
+                saveClassesConfig();
                 showToast("Rombel dihapus!");
             });
         }
 
-        async function saveClassesConfig() {
-            if (db && userId) {
-                try {
-                    const docRef = doc(db, 'artifacts', appId, 'users', userId, 'config', 'classes');
-                    await setDoc(docRef, { list: classes });
-                } catch (error) {
-                    console.error("Gagal simpan konfigurasi kelas:", error);
-                }
-            } else {
-                renderClassManagementUI();
-                renderTable();
-                updateDashboard();
-            }
+        function saveClassesConfig() {
+            localStorage.setItem('smpdm_classes', JSON.stringify(classes));
+            renderClassManagementUI();
+            renderTable();
+            updateDashboard();
         }
 
         window.addSubjectField = function(data = {}) {
@@ -827,9 +793,6 @@
             row.className = 'bg-white p-3 rounded-lg border border-slate-200 space-y-2 text-xs relative';
             
             let loads = data.classLoads || {};
-            if (data.c7 !== undefined && loads['VII'] === undefined) loads['VII'] = data.c7;
-            if (data.c8 !== undefined && loads['VIII'] === undefined) loads['VIII'] = data.c8;
-            if (data.c9 !== undefined && loads['IX'] === undefined) loads['IX'] = data.c9;
 
             let classInputsHtml = '';
             classes.forEach(cls => {
@@ -934,51 +897,33 @@
                 }
             }
 
-            const updatedData = { name, subjects, tasks };
+            const id = editingTeacherId || Math.random().toString(36).substr(2, 9);
+            const updatedData = { id, name, subjects, tasks };
 
-            if (editingTeacherId) {
-                if (db && userId) {
-                    try {
-                        const docRef = doc(db, 'artifacts', appId, 'users', userId, 'teachers', editingTeacherId);
-                        await setDoc(docRef, updatedData);
-                        showToast('Data guru berhasil diunggah ke Cloud!');
-                    } catch (error) {
-                        showToast('Firestore Gagal: ' + error.message, 'error');
-                    }
-                } else {
-                    const idx = teachers.findIndex(t => t.id === editingTeacherId);
-                    if (idx !== -1) {
-                        teachers[idx] = { id: editingTeacherId, ...updatedData };
-                        teachers.sort((a, b) => a.name.localeCompare(b.name, 'id', { sensitivity: 'base' }));
-                        renderTable();
-                        updateDashboard();
-                    }
-                    showToast('Data guru berhasil diubah secara lokal!');
-                }
+            // Optimistic UI Update (Cepat responsif di layar)
+            const existingIdx = teachers.findIndex(t => t.id === id);
+            if (existingIdx !== -1) {
+                teachers[existingIdx] = updatedData;
             } else {
-                const newId = Math.random().toString(36).substr(2, 9);
-                if (db && userId) {
-                    try {
-                        const docRef = doc(db, 'artifacts', appId, 'users', userId, 'teachers', newId);
-                        await setDoc(docRef, updatedData);
-                        showToast('Guru sukses ditambahkan ke Cloud!');
-                    } catch (error) {
-                        showToast('Firestore Gagal: ' + error.message, 'error');
-                    }
-                } else {
-                    teachers.push({ id: newId, ...updatedData });
-                    teachers.sort((a, b) => a.name.localeCompare(b.name, 'id', { sensitivity: 'base' }));
-                    renderTable();
-                    updateDashboard();
-                    showToast('Guru sukses ditambahkan secara lokal!');
-                }
+                teachers.push(updatedData);
+            }
+            teachers.sort((a, b) => a.name.localeCompare(b.name, 'id', { sensitivity: 'base' }));
+            
+            renderTable();
+            updateDashboard();
+
+            // Jalankan sinkronisasi cloud Google Sheets di background
+            showToast("Menyimpan ke Cloud...", "info");
+            const res = await sendActionToSheet('save', updatedData);
+            if (res && res.status === "success") {
+                showToast("Data tersimpan aman di Google Sheets!");
             }
 
             resetForm();
         });
 
         window.renderTable = function() {
-            // Build Header Row dynamically based on "classes" state
+            // Build Header Row
             const headerRow = document.getElementById('tableHeaderRow');
             let headerHtml = `
                 <th class="p-2.5 text-center w-10">NO</th>
@@ -997,7 +942,7 @@
             `;
             headerRow.innerHTML = headerHtml;
 
-            // Build Footer Row dynamically based on "classes" state
+            // Build Footer Row
             const footerRow = document.getElementById('tableFooterRow');
             let footerHtml = `
                 <td colspan="3" class="p-3 text-right font-bold text-slate-700">TOTAL JAM ACUAN KBM (AKUMULATIF)</td>
@@ -1017,7 +962,7 @@
 
             const currentFilter = document.getElementById('viewFilter').value;
 
-            // Object to track class totals
+            // Trackers
             const classTotals = {};
             classes.forEach(cls => classTotals[cls] = 0);
             let grandTotalJp = 0;
@@ -1029,7 +974,6 @@
             }
 
             teachers.forEach((t, tIdx) => {
-                // Filter subjects first based on status if filter is selected
                 let filteredSubjects = t.subjects;
                 if (currentFilter === 'riil') {
                     filteredSubjects = t.subjects.filter(s => s.status === 'riil');
@@ -1045,14 +989,7 @@
                 let totalMapelJp = 0;
                 filteredSubjects.forEach(sub => {
                     classes.forEach(cls => {
-                        let load = 0;
-                        if (sub.classLoads && sub.classLoads[cls] !== undefined) {
-                            load = sub.classLoads[cls];
-                        } else {
-                            if (cls === 'VII' && sub.c7 !== undefined) load = sub.c7;
-                            if (cls === 'VIII' && sub.c8 !== undefined) load = sub.c8;
-                            if (cls === 'IX' && sub.c9 !== undefined) load = sub.c9;
-                        }
+                        let load = sub.classLoads ? (sub.classLoads[cls] || 0) : 0;
                         totalMapelJp += load;
                     });
                 });
@@ -1063,13 +1000,13 @@
                 for (let rIdx = 0; rIdx < totalRowsForThisTeacher; rIdx++) {
                     const tr = document.createElement('tr');
                     
-                    // Alternating background pattern by teacher block to easily distinguish grouped rows
+                    // Alternating background pattern
                     const blockBgClass = tIdx % 2 === 0 ? 'bg-white' : 'bg-slate-50/70';
                     tr.className = `${blockBgClass} hover:bg-emerald-50/20 transition divide-x divide-slate-200/50`;
 
                     let htmlStr = '';
 
-                    // Merge columns for Teacher Metadata on the very first row of this block
+                    // Merge columns for Teacher Metadata
                     if (rIdx === 0) {
                         htmlStr += `
                             <td class="p-2 text-center font-bold text-slate-600 align-middle" rowspan="${totalRowsForThisTeacher}">${tIdx + 1}</td>
@@ -1079,12 +1016,12 @@
                         `;
                     }
 
-                    // Render Subject Details for the current index
+                    // Render Subject Details
                     const sub = filteredSubjects[rIdx];
                     if (sub) {
                         const statusBadge = sub.status === 'riil' 
                             ? `<span class="inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-bold bg-emerald-100 text-emerald-800 ml-1.5" title="Riil Diajarkan"><i class="fas fa-check mr-0.5"></i>RIIL</span>`
-                            : `<span class="inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-bold bg-amber-100 text-amber-800 ml-1.5" title="Hanya Administrasi/Formalitas"><i class="fas fa-file-invoice mr-0.5"></i>ADM</span>`;
+                            : `<span class="inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-bold bg-amber-100 text-amber-800 ml-1.5" title="Administrasi"><i class="fas fa-file-invoice mr-0.5"></i>ADM</span>`;
 
                         htmlStr += `
                             <td class="p-2 font-medium">
@@ -1098,14 +1035,7 @@
                         // Render dynamic loads per class
                         let subTotal = 0;
                         classes.forEach(cls => {
-                            let val = 0;
-                            if (sub.classLoads && sub.classLoads[cls] !== undefined) {
-                                val = sub.classLoads[cls];
-                            } else {
-                                if (cls === 'VII' && sub.c7 !== undefined) val = sub.c7;
-                                if (cls === 'VIII' && sub.c8 !== undefined) val = sub.c8;
-                                if (cls === 'IX' && sub.c9 !== undefined) val = sub.c9;
-                            }
+                            let val = sub.classLoads ? (sub.classLoads[cls] || 0) : 0;
                             classTotals[cls] += val;
                             subTotal += val;
                             htmlStr += `<td class="p-2 text-center font-mono">${val || '-'}</td>`;
@@ -1122,7 +1052,7 @@
                         htmlStr += `<td class="p-2 text-center font-mono text-slate-300">-</td>`;
                     }
 
-                    // Render Tasks for current index
+                    // Render Tasks
                     const task = t.tasks[rIdx];
                     if (task) {
                         htmlStr += `
@@ -1160,9 +1090,9 @@
                 }
             });
 
-            // Update footer totals dynamically
+            // Update footer totals
             classes.forEach(cls => {
-                const val = classTotals[cls] !== undefined ? classTotals[cls] : 0;
+                const val = classTotals[cls] || 0;
                 document.getElementById(`foot-${cls}`).textContent = val;
             });
             document.getElementById('footTotalJp').textContent = grandTotalJp + " JP";
@@ -1182,14 +1112,7 @@
                 t.subjects.forEach(s => {
                     let subTotal = 0;
                     classes.forEach(cls => {
-                        let load = 0;
-                        if (s.classLoads && s.classLoads[cls] !== undefined) {
-                            load = s.classLoads[cls];
-                        } else {
-                            if (cls === 'VII' && s.c7 !== undefined) load = s.c7;
-                            if (cls === 'VIII' && s.c8 !== undefined) load = s.c8;
-                            if (cls === 'IX' && s.c9 !== undefined) load = s.c9;
-                        }
+                        let load = s.classLoads ? (s.classLoads[cls] || 0) : 0;
                         subTotal += load;
                     });
 
@@ -1305,14 +1228,7 @@
                 t.subjects.forEach(s => {
                     let subTotal = 0;
                     classes.forEach(cls => {
-                        let val = 0;
-                        if (s.classLoads && s.classLoads[cls] !== undefined) {
-                            val = s.classLoads[cls];
-                        } else {
-                            if (cls === 'VII' && s.c7 !== undefined) val = s.c7;
-                            if (cls === 'VIII' && s.c8 !== undefined) val = s.c8;
-                            if (cls === 'IX' && s.c9 !== undefined) val = s.c9;
-                        }
+                        let val = s.classLoads ? (s.classLoads[cls] || 0) : 0;
                         subTotal += val;
                     });
                     if (s.status === 'riil') riilJp += subTotal;
@@ -1389,19 +1305,15 @@
             const teacher = teachers.find(t => t.id === id);
             if (!teacher) return;
             openConfirmModal(`Hapus data beban kerja untuk ${teacher.name}?`, async () => {
-                if (db && userId) {
-                    try {
-                        const docRef = doc(db, 'artifacts', appId, 'users', userId, 'teachers', id);
-                        await deleteDoc(docRef);
-                        showToast('Data guru sukses dihapus dari Cloud.', 'info');
-                    } catch (error) {
-                        showToast('Gagal menghapus data dari Cloud.', 'error');
-                    }
-                } else {
-                    teachers = teachers.filter(t => t.id !== id);
-                    renderTable();
-                    updateDashboard();
-                    showToast('Data guru sukses dihapus secara lokal.', 'info');
+                // Optimistic UI
+                teachers = teachers.filter(t => t.id !== id);
+                renderTable();
+                updateDashboard();
+
+                showToast("Menghapus di Cloud...", "info");
+                const res = await sendActionToSheet('delete', { id });
+                if (res && res.status === "success") {
+                    showToast('Data sukses terhapus dari Google Sheets.');
                 }
             });
         }
@@ -1409,22 +1321,15 @@
         window.triggerClearAllData = function() {
             if (teachers.length === 0) return;
             openConfirmModal("Apakah Anda sepenuhnya yakin ingin mengosongkan seluruh database beban kerja sekolah?", async () => {
-                if (db && userId) {
-                    try {
-                        const promises = teachers.map(t => {
-                            const docRef = doc(db, 'artifacts', appId, 'users', userId, 'teachers', t.id);
-                            return deleteDoc(docRef);
-                        });
-                        await Promise.all(promises);
-                        showToast('Semua database cloud dikosongkan.', 'info');
-                    } catch (error) {
-                        showToast('Gagal mengosongkan data cloud.', 'error');
-                    }
-                } else {
-                    teachers = [];
-                    renderTable();
-                    updateDashboard();
-                    showToast('Semua data lokal dikosongkan.', 'info');
+                // Optimistic UI
+                teachers = [];
+                renderTable();
+                updateDashboard();
+
+                showToast("Mengosongkan Cloud...", "info");
+                const res = await sendActionToSheet('clear');
+                if (res && res.status === "success") {
+                    showToast('Semua database Google Sheets dikosongkan.');
                 }
             });
         }
@@ -1481,14 +1386,7 @@
                 let totalMapelJp = 0;
                 t.subjects.forEach(sub => {
                     classes.forEach(cls => {
-                        let load = 0;
-                        if (sub.classLoads && sub.classLoads[cls] !== undefined) {
-                            load = sub.classLoads[cls];
-                        } else {
-                            if (cls === 'VII' && sub.c7 !== undefined) load = sub.c7;
-                            if (cls === 'VIII' && sub.c8 !== undefined) load = sub.c8;
-                            if (cls === 'IX' && sub.c9 !== undefined) load = sub.c9;
-                        }
+                        let load = sub.classLoads ? (sub.classLoads[cls] || 0) : 0;
                         totalMapelJp += load;
                     });
                 });
@@ -1512,14 +1410,7 @@
                         
                         let subTotal = 0;
                         classes.forEach(cls => {
-                            let val = 0;
-                            if (sub.classLoads && sub.classLoads[cls] !== undefined) {
-                                val = sub.classLoads[cls];
-                            } else {
-                                if (cls === 'VII' && sub.c7 !== undefined) val = sub.c7;
-                                if (cls === 'VIII' && sub.c8 !== undefined) val = sub.c8;
-                                if (cls === 'IX' && sub.c9 !== undefined) val = sub.c9;
-                            }
+                            let val = sub.classLoads ? (sub.classLoads[cls] || 0) : 0;
                             classGlobalTotals[cls] += val;
                             subTotal += val;
                             row.push(val > 0 ? val : "-");
