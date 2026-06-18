@@ -65,10 +65,10 @@
             <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-4">
                 <h3 class="text-sm font-bold text-slate-700 flex items-center mb-2">
                     <i class="fas fa-cloud-upload-alt text-emerald-600 mr-2"></i>
-                    Sinkronisasi Database Cloud
+                    Sinkronisasi Database Cloud (SMP DM)
                 </h3>
                 <p class="text-xs text-slate-500 mb-3 leading-relaxed">
-                    Data Anda disimpan secara aman dan otomatis ke cloud database pribadi Anda. Anda dapat menutup atau membuka aplikasi ini kapan saja tanpa takut kehilangan data.
+                    Data tersimpan aman pada cloud database sekolah. Seluruh data diurutkan otomatis berdasarkan abjad (A-Z) dan dapat diakses kapan saja tanpa risiko terhapus.
                 </p>
                 <div class="bg-slate-50 rounded-lg p-2.5 border border-slate-200">
                     <span class="block text-[10px] uppercase font-bold text-slate-400 tracking-wider">User ID Unik Anda:</span>
@@ -200,66 +200,57 @@
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { getFirestore, doc, getDoc, setDoc, addDoc, updateDoc, deleteDoc, onSnapshot, collection } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, doc, setDoc, deleteDoc, onSnapshot, collection } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
         // Global state
         let teachers = [];
         let editingTeacherId = null;
         let auth, db;
         let userId = null;
-        const appId = typeof __app_id !== 'undefined' ? __app_id : 'edu-load-generator';
+        const appId = 'edu-load-generator';
 
-        // Initialize Firebase
+        // Konfigurasi Resmi Firebase SMP Darul Madinah Madiun
+        const firebaseConfig = {
+            apiKey: "AIzaSyCa8wOGJ52lQqJp6JkGDwPNIy_FURgRgqM",
+            authDomain: "smp-darul-madinah.firebaseapp.com",
+            projectId: "smp-darul-madinah",
+            storageBucket: "smp-darul-madinah.firebasestorage.app",
+            messagingSenderId: "729642373759",
+            appId: "1:729642373759:web:01d9c403ddfcafac5b254a",
+            measurementId: "G-WS4NTB2ZQ4"
+        };
+
+        // Inisialisasi Aplikasi Firebase Cloud
         async function initFirebase() {
-            if (typeof __firebase_config === 'undefined') {
-                showToast("Berjalan dalam Mode Demo (Tidak Menyimpan ke Cloud)", "info");
-                document.getElementById('cloudStatus').innerHTML = `
-                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-rose-100 text-rose-800">
-                        <span class="w-2 h-2 mr-1.5 bg-rose-500 rounded-full"></span>
-                        Offline (Demo Mode)
-                    </span>
-                `;
-                document.getElementById('userIdDisplay').textContent = "Demo-No-Sync";
-                renderDummyData();
-                return;
-            }
-
             try {
-                const firebaseConfig = JSON.parse(__firebase_config);
                 const app = initializeApp(firebaseConfig);
                 db = getFirestore(app);
                 auth = getAuth(app);
 
-                // Authentication
-                let user;
-                if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
-                    const credentials = await signInWithCustomToken(auth, __initial_auth_token);
-                    user = credentials.user;
-                } else {
-                    const credentials = await signInAnonymously(auth);
-                    user = credentials.user;
-                }
+                // Authentication Anonim
+                const credentials = await signInAnonymously(auth);
+                const user = credentials.user;
 
                 if (user) {
                     userId = user.uid;
                     document.getElementById('cloudStatus').innerHTML = `
                         <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-emerald-100 text-emerald-800">
                             <span class="w-2 h-2 mr-1.5 bg-emerald-500 rounded-full animate-ping"></span>
-                            Sinkronisasi Aktif
+                            Terhubung ke Cloud
                         </span>
                     `;
                     document.getElementById('userIdDisplay').textContent = userId;
 
-                    // Fetch and listen dynamically
+                    // Monitoring data Firestore Real-time
                     const colPath = collection(db, 'artifacts', appId, 'users', userId, 'teachers');
                     onSnapshot(colPath, (snapshot) => {
                         teachers = [];
                         snapshot.forEach((doc) => {
                             teachers.push({ id: doc.id, ...doc.data() });
                         });
-                        // Sort inside memory to avoid composite index query errors
-                        teachers.sort((a, b) => a.name.localeCompare(b.name));
+                        // Urutkan data berdasarkan nama guru secara abjad (A-Z)
+                        teachers.sort((a, b) => a.name.localeCompare(b.name, 'id', { sensitivity: 'base' }));
                         renderTable();
                     }, (error) => {
                         console.error("Firestore listening failed:", error);
@@ -268,7 +259,15 @@
                 }
             } catch (err) {
                 console.error("Firebase Initialization failed:", err);
-                showToast("Gagal tersambung ke cloud database.", "error");
+                showToast("Berjalan dalam Mode Demo (Gagal tersambung cloud)", "error");
+                document.getElementById('cloudStatus').innerHTML = `
+                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-rose-100 text-rose-800">
+                        <span class="w-2 h-2 mr-1.5 bg-rose-500 rounded-full"></span>
+                        Offline (Demo Mode)
+                    </span>
+                `;
+                document.getElementById('userIdDisplay').textContent = "Demo-No-Sync";
+                renderDummyData();
             }
         }
 
@@ -276,6 +275,13 @@
             teachers = [
                 {
                     id: "demo-1",
+                    name: "Abu Bakar Hanafiy, S.Pd.",
+                    subject: "Penjaskes",
+                    c7: 3, c8: 3, c9: 3,
+                    tasks: []
+                },
+                {
+                    id: "demo-2",
                     name: "Hebni, M.Pd.I.",
                     subject: "PAI",
                     c7: 3, c8: 3, c9: 3,
@@ -283,21 +289,13 @@
                         { name: "Kepala Perpustakaan", jp: 12 },
                         { name: "Wali Kelas VIII", jp: 2 }
                     ]
-                },
-                {
-                    id: "demo-2",
-                    name: "Siti Utami, S.Pd.",
-                    subject: "-",
-                    c7: 0, c8: 0, c9: 0,
-                    tasks: [
-                        { name: "Kepala Sekolah", jp: 24 }
-                    ]
                 }
             ];
+            teachers.sort((a, b) => a.name.localeCompare(b.name, 'id', { sensitivity: 'base' }));
             renderTable();
         }
 
-        // Inisialisasi Aplikasi
+        // Inisialisasi Aplikasi saat Load halaman
         window.onload = function() {
             initFirebase();
             addTaskField();
@@ -393,6 +391,7 @@
                     const idx = teachers.findIndex(t => t.id === editingTeacherId);
                     if (idx !== -1) {
                         teachers[idx] = { id: editingTeacherId, name, subject, c7, c8, c9, tasks };
+                        teachers.sort((a, b) => a.name.localeCompare(b.name, 'id', { sensitivity: 'base' }));
                         renderTable();
                     }
                     showToast('Data guru berhasil diperbarui secara lokal!');
@@ -408,13 +407,14 @@
                     try {
                         const docRef = doc(db, 'artifacts', appId, 'users', userId, 'teachers', newTeacher.id);
                         await setDoc(docRef, { name, subject, c7, c8, c9, tasks });
-                        showToast('Guru berhasil ditambahkan dan disinkronkan!');
+                        showToast('Guru berhasil ditambahkan ke database cloud!');
                     } catch (error) {
                         console.error("Save failed:", error);
                         showToast("Gagal menyimpan ke cloud.", "error");
                     }
                 } else {
                     teachers.push(newTeacher);
+                    teachers.sort((a, b) => a.name.localeCompare(b.name, 'id', { sensitivity: 'base' }));
                     renderTable();
                     showToast('Guru berhasil ditambahkan secara lokal!');
                 }
@@ -485,6 +485,7 @@
 
         window.clearAllData = async function() {
             if(teachers.length === 0) return;
+            if(!confirm("Apakah Anda yakin ingin mengosongkan seluruh data guru?")) return;
             
             if (db && userId) {
                 try {
