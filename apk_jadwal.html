@@ -2,65 +2,123 @@
 <html lang="id">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>EduSched Pro - Cerdas & Otomatis</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>EduSched Pro - Cerdas, Otomatis & Aman</title>
+    <!-- Load Tailwind CSS & FontAwesome -->
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    
+    <!-- Load jsPDF & AutoTable untuk Ekspor PDF Instan -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.6.0/jspdf.plugin.autotable.min.js"></script>
+    
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
         body { font-family: 'Inter', sans-serif; background-color: #f8fafc; }
         ::-webkit-scrollbar { width: 6px; height: 6px; }
         ::-webkit-scrollbar-track { background: transparent; }
         ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
         ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+        
+        /* Table Layout Styling */
         .excel-table { border-collapse: separate; border-spacing: 0; }
-        .excel-table th, .excel-table td { border: 1px solid #e2e8f0; }
-        .excel-table thead th { background: #f1f5f9; position: sticky; top: 0; z-index: 10; box-shadow: 0 1px 0 #e2e8f0; }
-        .excel-day { background: #e0e7ff; font-weight: bold; color: #3730a3; writing-mode: vertical-rl; transform: rotate(180deg); }
-        .excel-time { background: #f8fafc; font-weight: 600; color: #475569; }
-        .excel-break { background: #fef3c7; color: #92400e; font-weight: bold; font-style: italic; }
+        .excel-table th, .excel-table td { border: 1px solid #cbd5e1; }
+        .excel-table thead th { background: #f1f5f9; position: sticky; top: 0; z-index: 10; box-shadow: 0 1px 0 #cbd5e1; }
+        
+        /* Column Width Optimization for Web */
+        .col-hari { width: 65px; text-align: center; font-weight: bold; }
+        .col-waktu { width: 120px; text-align: center; }
+        .col-ke { width: 50px; text-align: center; }
+        .col-kelas { min-width: 150px; max-width: 250px; text-align: center; }
+        
+        .excel-day { font-weight: bold; writing-mode: vertical-rl; transform: rotate(180deg); }
+        .excel-time { font-weight: 600; color: #475569; }
+        .excel-break { background: #f1f5f9; color: #475569; font-weight: bold; font-style: italic; }
+        
+        /* Interactive States */
         .slot-clickable { transition: all 0.15s ease; cursor: pointer; background: white; }
         .slot-clickable:hover { background: #eef2ff; box-shadow: inset 0 0 0 2px #818cf8; }
-        .slot-filled { cursor: move; transition: all 0.15s ease; background: #e0e7ff; border: 1px solid #c7d2fe; border-radius: 4px; box-shadow: 0 1px 2px rgba(0,0,0,0.05); }
-        .slot-filled:hover { transform: translateY(-1px); box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); filter: brightness(0.95); }
-        .slot-filled:active { cursor: grabbing; }
+        .slot-filled { cursor: pointer; transition: all 0.15s ease; border: 1px solid #cbd5e1; box-shadow: 0 1px 2px rgba(0,0,0,0.05); }
+        .slot-filled:hover { transform: translateY(-1px); box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); filter: brightness(0.97); }
+        .slot-moving { animation: pulseMove 1s infinite alternate; background: #fae8ff !important; border-left: 4px solid #c084fc !important; box-shadow: 0 0 0 2px #c084fc; }
+        
+        /* Visual Indicator Target Pindah Sel */
+        .slot-eligible-target {
+            background-color: #faf5ff !important;
+            border: 2px dashed #c084fc !important;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        .slot-eligible-target:hover {
+            background-color: #f3e8ff !important;
+            border: 2px solid #a855f7 !important;
+        }
+
+        @keyframes pulseMove {
+            0% { opacity: 0.7; }
+            100% { opacity: 1; }
+        }
+
         .tab-btn.active { color: #4f46e5; border-bottom: 2px solid #4f46e5; font-weight: 600; background: #eef2ff; }
-        .toast { transition: opacity 0.3s, transform 0.3s; }
+
+        /* Proteksi Ketukan Mobile (Mencegah Menu Bawaan Android/iOS) */
+        .col-kelas, .slot-filled, .slot-clickable, table, tr, td, th, .action-bar, button {
+            -webkit-touch-callout: none !important; /* iOS Safari menu blokir */
+            -webkit-user-select: none !important; /* Safari */
+            -khtml-user-select: none !important;
+            -moz-user-select: none !important; /* Firefox */
+            -ms-user-select: none !important; /* IE/Edge */
+            user-select: none !important; /* Standar */
+            touch-action: manipulation; /* Mematikan double-tap zoom bawaan mobile */
+        }
+
+        /* Izinkan input form tetap bisa mengetik */
+        input, select, textarea, datalist, option {
+            -webkit-user-select: text !important;
+            user-select: text !important;
+        }
     </style>
 </head>
 <body class="text-slate-800 flex flex-col h-screen overflow-hidden">
     <nav class="bg-white shadow-sm border-b border-slate-200 shrink-0">
         <div class="max-w-full mx-auto px-4 sm:px-6 lg:px-8 flex justify-between h-14">
             <div class="flex items-center space-x-3">
-                <div class="bg-indigo-600 p-2 rounded-lg text-white"><i class="fa-solid fa-calendar-days"></i></div>
+                <div class="bg-indigo-600 p-2 rounded-lg text-white" aria-hidden="true"><i class="fa-solid fa-calendar-days"></i></div>
                 <span class="font-bold text-lg text-slate-800 tracking-tight">EduSched <span class="text-indigo-600">Pro</span></span>
             </div>
             <div class="flex items-center space-x-1 sm:space-x-4">
-                <button onclick="switchTab('teaching')" id="tab-teaching" class="tab-btn active px-3 sm:px-4 py-2 sm:py-4 text-xs sm:text-sm text-slate-500 hover:text-indigo-600 transition-colors"><i class="fa-solid fa-chalkboard-user mr-1 sm:mr-2"></i><span class="hidden sm:inline">Beban Mengajar</span></button>
-                <button onclick="switchTab('schedule')" id="tab-schedule" class="tab-btn px-3 sm:px-4 py-2 sm:py-4 text-xs sm:text-sm text-slate-500 hover:text-indigo-600 transition-colors"><i class="fa-solid fa-table-cells-large mr-1 sm:mr-2"></i><span class="hidden sm:inline">Papan Jadwal</span></button>
-                <button onclick="switchTab('settings')" id="tab-settings" class="tab-btn px-3 sm:px-4 py-2 sm:py-4 text-xs sm:text-sm text-slate-500 hover:text-indigo-600 transition-colors"><i class="fa-solid fa-gear mr-1 sm:mr-2"></i><span class="hidden sm:inline">Pengaturan</span></button>
+                <button onclick="switchTab('teaching')" id="tab-teaching" class="tab-btn active px-3 sm:px-4 py-2 sm:py-4 text-xs sm:text-sm text-slate-500 hover:text-indigo-600 transition-colors" aria-label="Beban Mengajar"><i class="fa-solid fa-chalkboard-user mr-1 sm:mr-2"></i><span class="hidden sm:inline">Beban Mengajar</span></button>
+                <button onclick="switchTab('schedule')" id="tab-schedule" class="tab-btn px-3 sm:px-4 py-2 sm:py-4 text-xs sm:text-sm text-slate-500 hover:text-indigo-600 transition-colors" aria-label="Papan Jadwal"><i class="fa-solid fa-table-cells-large mr-1 sm:mr-2"></i><span class="hidden sm:inline">Papan Jadwal</span></button>
+                <button onclick="switchTab('settings')" id="tab-settings" class="tab-btn px-3 sm:px-4 py-2 sm:py-4 text-xs sm:text-sm text-slate-500 hover:text-indigo-600 transition-colors" aria-label="Pengaturan"><i class="fa-solid fa-gear mr-1 sm:mr-2"></i><span class="hidden sm:inline">Pengaturan</span></button>
             </div>
         </div>
     </nav>
 
-    <div id="confirmModal" class="fixed inset-0 bg-slate-900/60 z-[300] hidden flex items-center justify-center p-4 backdrop-blur-sm">
+    <!-- Banner Notifikasi Aktif Pindah Sel -->
+    <div id="move-mode-banner" class="hidden bg-purple-600 text-white text-xs font-bold py-2.5 px-4 shadow-md flex justify-between items-center transition-all">
+        <span><i class="fa-solid fa-arrows-spin animate-spin mr-2"></i>Mode Pindah Sel Aktif! Ketuk salah satu sel target yang berlabel "Pindahkan" untuk menggeser jadwal.</span>
+        <button onclick="cancelMoveMode()" class="bg-purple-800 hover:bg-purple-900 px-3 py-1 rounded text-[10px]" aria-label="Batalkan Pindah">Batal</button>
+    </div>
+
+    <!-- Modal Konfirmasi Umum -->
+    <div id="confirmModal" class="fixed inset-0 bg-slate-900/60 z-[300] hidden flex items-center justify-center p-4 backdrop-blur-sm" role="dialog" aria-modal="true">
         <div class="bg-white rounded-xl shadow-2xl w-full max-w-sm overflow-hidden relative border border-slate-200 p-5 text-center">
-            <i class="fa-solid fa-circle-exclamation text-4xl text-amber-500 mb-3"></i>
+            <i class="fa-solid fa-circle-exclamation text-4xl text-amber-500 mb-3" aria-hidden="true"></i>
             <h3 class="font-bold text-slate-800 mb-2">Konfirmasi Aksi</h3>
             <p id="confirm-msg" class="text-sm text-slate-600 mb-5 leading-relaxed">Apakah Anda yakin?</p>
             <div class="flex space-x-3 justify-center">
-                <button onclick="closeConfirm()" class="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-sm font-bold transition-colors">Batal</button>
-                <button id="btn-confirm-ok" class="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg text-sm font-bold transition-colors">Ya, Lanjutkan</button>
+                <button onclick="closeConfirm()" class="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg text-sm font-bold transition-colors" aria-label="Batal">Batal</button>
+                <button id="btn-confirm-ok" class="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg text-sm font-bold transition-colors" aria-label="Ya, Lanjutkan">Ya, Lanjutkan</button>
             </div>
         </div>
     </div>
 
-    <div id="rowClassModal" class="fixed inset-0 bg-slate-900/60 z-[200] hidden flex items-center justify-center p-4 backdrop-blur-sm">
+    <!-- Modal Struktur Target Kelas -->
+    <div id="rowClassModal" class="fixed inset-0 bg-slate-900/60 z-[200] hidden flex items-center justify-center p-4 backdrop-blur-sm" role="dialog" aria-modal="true">
         <div class="bg-white rounded-xl shadow-2xl w-full max-w-sm overflow-hidden relative border border-slate-200">
             <div class="px-5 py-3 bg-indigo-600 flex justify-between items-center text-white border-b border-indigo-700">
                 <div><h3 class="font-bold text-sm">Target Kelas</h3><p class="text-[10px] text-indigo-200">Pilih kelas aktif di jam ini</p></div>
-                <button onclick="closeRowClassModal()" class="hover:bg-white/20 px-2 py-1 rounded"><i class="fa-solid fa-xmark text-lg"></i></button>
+                <button onclick="closeRowClassModal()" class="hover:bg-white/20 px-2 py-1 rounded" aria-label="Tutup"><i class="fa-solid fa-xmark text-lg"></i></button>
             </div>
             <div class="p-4 max-h-[50vh] overflow-y-auto bg-slate-50">
                 <label class="flex items-center space-x-3 mb-3 pb-3 border-b border-slate-200 cursor-pointer">
@@ -70,27 +128,42 @@
                 <div id="rcm-classes-container" class="space-y-1.5"></div>
             </div>
             <div class="bg-white px-5 py-3 border-t border-slate-200 flex justify-end">
-                <button onclick="saveRowClassSelection()" class="bg-indigo-600 hover:bg-indigo-700 rounded-lg px-5 py-2 text-xs font-bold text-white transition-colors">Simpan Pilihan</button>
+                <button onclick="saveRowClassSelection()" class="bg-indigo-600 hover:bg-indigo-700 rounded-lg px-5 py-2 text-xs font-bold text-white transition-colors" aria-label="Simpan Pilihan">Simpan Pilihan</button>
             </div>
         </div>
     </div>
 
-    <div id="plotModal" class="fixed inset-0 bg-slate-900/60 z-[100] hidden flex items-center justify-center p-4 backdrop-blur-sm">
+    <!-- Modal Pilih Mapel -->
+    <div id="plotModal" class="fixed inset-0 bg-slate-900/60 z-[100] hidden flex items-center justify-center p-4 backdrop-blur-sm" role="dialog" aria-modal="true">
         <div class="bg-white rounded-xl shadow-2xl w-full max-w-md overflow-hidden relative border border-slate-200">
             <div class="px-5 py-3 bg-indigo-600 flex justify-between items-center text-white border-b border-indigo-700">
                 <div><h3 class="font-bold text-sm" id="pm-title">Pilih Mapel</h3><p class="text-[10px] text-indigo-200" id="pm-subtitle"></p></div>
-                <button onclick="closePlotModal()" class="hover:bg-white/20 px-2 py-1 rounded"><i class="fa-solid fa-xmark text-lg"></i></button>
+                <button onclick="closePlotModal()" class="hover:bg-white/20 px-2 py-1 rounded" aria-label="Tutup"><i class="fa-solid fa-xmark text-lg"></i></button>
             </div>
             <div class="p-4">
                 <div class="relative mb-3">
-                    <i class="fa-solid fa-magnifying-glass absolute left-3 top-2.5 text-slate-400 text-sm"></i>
+                    <i class="fa-solid fa-magnifying-glass absolute left-3 top-2.5 text-slate-400 text-sm" aria-hidden="true"></i>
                     <input type="text" id="pm-search" placeholder="Cari guru/mapel..." class="w-full pl-9 pr-3 py-2 bg-slate-50 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" onkeyup="filterPlotList()">
                 </div>
                 <div id="pm-list" class="max-h-[50vh] overflow-y-auto space-y-1.5 pr-1"></div>
             </div>
             <div class="bg-white px-5 py-3 border-t border-slate-200 flex justify-between">
-                <button id="btn-delete-plot" onclick="removePlot()" class="text-red-600 bg-red-50 hover:bg-red-100 px-3 py-1.5 rounded text-xs font-bold hidden transition-colors"><i class="fa-solid fa-trash mr-1"></i>Kosongkan Sel</button>
-                <button onclick="closePlotModal()" class="ml-auto text-slate-600 hover:bg-slate-100 px-4 py-1.5 rounded text-xs font-bold transition-colors">Batal</button>
+                <button id="btn-delete-plot" onclick="removePlot()" class="text-red-600 bg-red-50 hover:bg-red-100 px-3 py-1.5 rounded text-xs font-bold hidden transition-colors" aria-label="Kosongkan Sel"><i class="fa-solid fa-trash mr-1"></i>Kosongkan Sel</button>
+                <button onclick="closePlotModal()" class="ml-auto text-slate-600 hover:bg-slate-100 px-4 py-1.5 rounded text-xs font-bold transition-colors" aria-label="Batal">Batal</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Log Kegagalan Auto-Pilot -->
+    <div id="logModal" class="fixed inset-0 bg-slate-900/60 z-[400] hidden flex items-center justify-center p-4 backdrop-blur-sm" role="dialog" aria-modal="true">
+        <div class="bg-white rounded-xl shadow-2xl w-full max-w-md overflow-hidden relative border border-slate-200">
+            <div class="px-5 py-3 bg-rose-600 flex justify-between items-center text-white">
+                <div><h3 class="font-bold text-sm"><i class="fa-solid fa-circle-exclamation mr-1.5" aria-hidden="true"></i>Laporan Sisa Jam Terlewat</h3><p class="text-[10px] text-rose-200">Beban mengajar berikut tidak mendapatkan slot kosong</p></div>
+                <button onclick="document.getElementById('logModal').classList.add('hidden')" class="hover:bg-white/20 px-2 py-1 rounded" aria-label="Tutup"><i class="fa-solid fa-xmark text-lg"></i></button>
+            </div>
+            <div class="p-4 max-h-[40vh] overflow-y-auto bg-slate-50 space-y-2" id="log-list-container"></div>
+            <div class="bg-white p-3 border-t border-slate-200 flex justify-end">
+                <button onclick="document.getElementById('logModal').classList.add('hidden')" class="bg-slate-800 hover:bg-slate-900 text-white rounded-lg px-4 py-1.5 text-xs font-bold" aria-label="Saya Mengerti">Saya Mengerti</button>
             </div>
         </div>
     </div>
@@ -102,37 +175,60 @@
             <div id="content-teaching" class="tab-content flex flex-col lg:flex-row gap-6">
                 <div class="w-full lg:w-1/3 space-y-4">
                     <div class="bg-white p-5 rounded-xl shadow-sm border border-slate-200">
-                        <div class="flex justify-between items-center mb-4"><h3 class="font-bold text-slate-800"><i class="fa-solid fa-plus text-indigo-500 mr-2"></i>Input Beban</h3><span class="bg-slate-100 text-slate-500 text-[10px] px-2 py-1 rounded-md font-bold" id="total-asg-count">0 Data</span></div>
+                        <div class="flex justify-between items-center mb-4">
+                            <h3 class="font-bold text-slate-800"><i class="fa-solid fa-plus text-indigo-500 mr-2" aria-hidden="true"></i>Input Beban</h3>
+                            <span class="bg-slate-100 text-slate-500 text-[10px] px-2 py-1 rounded-md font-bold" id="total-asg-count">0 Data</span>
+                        </div>
                         <div class="space-y-3">
-                            <div><label class="block text-xs font-semibold text-slate-600 mb-1">Nama Guru</label><input type="text" id="asg-teacher" class="w-full border border-slate-300 rounded-lg p-2.5 text-sm outline-none focus:ring-2 focus:ring-indigo-500" placeholder="Budi Santoso, S.Pd" list="teacher-list-data"></div>
-                            <datalist id="teacher-list-data"></datalist>
-                            <div><label class="block text-xs font-semibold text-slate-600 mb-1">Mata Pelajaran</label><input type="text" id="asg-subject" class="w-full border border-slate-300 rounded-lg p-2.5 text-sm outline-none focus:ring-2 focus:ring-indigo-500" placeholder="Matematika"></div>
+                            <div>
+                                <label class="block text-xs font-semibold text-slate-600 mb-1">Nama Guru</label>
+                                <input type="text" id="asg-teacher" class="w-full border border-slate-300 rounded-lg p-2.5 text-sm outline-none focus:ring-2 focus:ring-indigo-500" placeholder="Budi Santoso, S.Pd" list="teacher-list-data">
+                                <datalist id="teacher-list-data"></datalist>
+                            </div>
+                            <div>
+                                <label class="block text-xs font-semibold text-slate-600 mb-1">Mata Pelajaran</label>
+                                <input type="text" id="asg-subject" class="w-full border border-slate-300 rounded-lg p-2.5 text-sm outline-none focus:ring-2 focus:ring-indigo-500" placeholder="Matematika">
+                            </div>
                             <div class="flex space-x-3">
-                                <div class="w-2/3"><label class="block text-xs font-semibold text-slate-600 mb-1">Kelas</label><select id="asg-class" class="w-full border border-slate-300 rounded-lg p-2.5 text-sm outline-none focus:ring-2 focus:ring-indigo-500 bg-white"><option value="">-- Pilih --</option></select></div>
-                                <div class="w-1/3"><label class="block text-xs font-semibold text-slate-600 mb-1">JP</label><input type="number" id="asg-jp" min="1" class="w-full border border-slate-300 rounded-lg p-2.5 text-sm outline-none focus:ring-2 focus:ring-indigo-500" placeholder="0"></div>
+                                <div class="w-2/3">
+                                    <label class="block text-xs font-semibold text-slate-600 mb-1">Kelas</label>
+                                    <select id="asg-class" class="w-full border border-slate-300 rounded-lg p-2.5 text-sm outline-none focus:ring-2 focus:ring-indigo-500 bg-white"><option value="">-- Pilih --</option></select>
+                                </div>
+                                <div class="w-1/3">
+                                    <label class="block text-xs font-semibold text-slate-600 mb-1">JP</label>
+                                    <input type="number" id="asg-jp" min="1" class="w-full border border-slate-300 rounded-lg p-2.5 text-sm outline-none focus:ring-2 focus:ring-indigo-500" placeholder="0" oninput="checkCapacityWarning()">
+                                </div>
+                            </div>
+                            <!-- Kapasitas Warning Badge -->
+                            <div id="capacity-warning" class="hidden bg-amber-50 border border-amber-200 rounded-lg p-2.5 text-[11px] text-amber-700 flex items-start space-x-2">
+                                <i class="fa-solid fa-circle-exclamation mt-0.5 shrink-0" aria-hidden="true"></i>
+                                <span><strong>Peringatan Kapasitas:</strong> Total alokasi JP sekolah akan melebihi total slot KBM yang tersedia!</span>
                             </div>
                             <div class="flex space-x-2 mt-2">
-                                <button id="btn-save-asg" onclick="saveOrUpdateAssignment()" class="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2.5 rounded-lg text-sm shadow-sm transition-colors"><i class="fa-solid fa-save mr-1.5"></i>Simpan</button>
-                                <button id="btn-cancel-edit-asg" onclick="cancelEditAssignment()" class="hidden bg-slate-100 hover:bg-slate-200 text-slate-600 font-bold py-2.5 px-3 rounded-lg text-sm shadow-sm"><i class="fa-solid fa-xmark"></i></button>
+                                <button id="btn-save-asg" onclick="saveOrUpdateAssignment()" class="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2.5 rounded-lg text-sm shadow-sm transition-colors" aria-label="Simpan"><i class="fa-solid fa-save mr-1.5" aria-hidden="true"></i>Simpan</button>
+                                <button id="btn-cancel-edit-asg" onclick="cancelEditAssignment()" class="hidden bg-slate-100 hover:bg-slate-200 text-slate-600 font-bold py-2.5 px-3 rounded-lg text-sm shadow-sm" aria-label="Batal Edit"><i class="fa-solid fa-xmark" aria-hidden="true"></i></button>
                             </div>
                         </div>
                     </div>
                     
                     <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-200">
-                        <h3 class="font-bold text-slate-800 mb-3 text-sm"><i class="fa-solid fa-chalkboard text-green-500 mr-2"></i>Kelola Kelas</h3>
+                        <h3 class="font-bold text-slate-800 mb-3 text-sm"><i class="fa-solid fa-chalkboard text-green-500 mr-2" aria-hidden="true"></i>Kelola Kelas</h3>
                         <div class="flex space-x-2">
                             <input type="text" id="new-class-name" placeholder="Nama (ex: VII A)" class="flex-1 border border-slate-300 rounded-lg p-2 text-sm outline-none focus:ring-2 focus:ring-green-500">
-                            <button onclick="addClass()" class="bg-green-600 hover:bg-green-700 text-white px-3 rounded-lg text-sm font-bold"><i class="fa-solid fa-plus"></i></button>
+                            <button onclick="addClass()" class="bg-green-600 hover:bg-green-700 text-white px-3 rounded-lg text-sm font-bold" aria-label="Tambah Kelas"><i class="fa-solid fa-plus" aria-hidden="true"></i></button>
                         </div>
                         <div id="class-list-tags" class="mt-3 flex flex-wrap gap-1.5"></div>
                     </div>
                     
                     <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-200">
-                        <div class="flex justify-between items-center mb-3"><h3 class="font-bold text-slate-800 text-sm"><i class="fa-solid fa-user-lock text-rose-500 mr-2"></i>Block Spot</h3><span class="bg-rose-100 text-rose-600 text-[10px] px-2 py-0.5 rounded font-bold" id="total-blocks">0 Guru</span></div>
+                        <div class="flex justify-between items-center mb-3">
+                            <h3 class="font-bold text-slate-800 text-sm"><i class="fa-solid fa-user-lock text-rose-500 mr-2" aria-hidden="true"></i>Block Spot Guru</h3>
+                            <span class="bg-rose-100 text-rose-600 text-[10px] px-2 py-0.5 rounded font-bold" id="total-blocks">0 Guru</span>
+                        </div>
                         <div class="space-y-3">
-                            <select id="block-teacher" class="w-full border border-slate-300 rounded-lg p-2.5 text-sm bg-white" onchange="loadTeacherBlock()"><option value="">-- Pilih Guru --</option></select>
+                            <select id="block-teacher" class="w-full border border-slate-300 rounded-lg p-2.5 text-sm bg-white text-xs" onchange="loadTeacherBlock()"><option value="">-- Pilih Guru --</option></select>
                             <div id="block-days-container" class="flex flex-wrap gap-1.5"></div>
-                            <button onclick="saveTeacherBlock()" class="w-full bg-rose-50 hover:bg-rose-100 text-rose-700 font-bold py-2 rounded-lg text-sm border border-rose-200 shadow-sm"><i class="fa-solid fa-save mr-1.5"></i>Simpan Aturan</button>
+                            <button onclick="saveTeacherBlock()" class="w-full bg-rose-50 hover:bg-rose-100 text-rose-700 font-bold py-2 rounded-lg text-xs border border-rose-200 shadow-sm" aria-label="Simpan Aturan Blokir"><i class="fa-solid fa-save mr-1.5" aria-hidden="true"></i>Simpan Aturan</button>
                             <div id="active-blocks-container" class="mt-2 space-y-1.5 max-h-32 overflow-y-auto pt-2 border-t border-slate-100"></div>
                         </div>
                     </div>
@@ -140,8 +236,8 @@
 
                 <div class="w-full lg:w-2/3 bg-white rounded-xl shadow-sm border border-slate-200 flex flex-col h-[75vh]">
                     <div class="p-4 border-b border-slate-200 flex justify-between items-center bg-slate-50/50 rounded-t-xl">
-                        <h3 class="font-bold text-slate-800"><i class="fa-solid fa-list-check text-indigo-500 mr-2"></i>Distribusi Jam</h3>
-                        <div class="relative w-48"><i class="fa-solid fa-magnifying-glass absolute left-2.5 top-2.5 text-slate-400 text-xs"></i><input type="text" id="search-asg" placeholder="Cari..." class="w-full pl-7 pr-2 py-1.5 border border-slate-300 rounded-md text-xs outline-none" onkeyup="renderAssignments()"></div>
+                        <h3 class="font-bold text-slate-800"><i class="fa-solid fa-list-check text-indigo-500 mr-2" aria-hidden="true"></i>Distribusi Jam</h3>
+                        <div class="relative w-48"><i class="fa-solid fa-magnifying-glass absolute left-2.5 top-2.5 text-slate-400 text-xs" aria-hidden="true"></i><input type="text" id="search-asg" placeholder="Cari..." class="w-full pl-7 pr-2 py-1.5 border border-slate-300 rounded-md text-xs outline-none" onkeyup="renderAssignments()"></div>
                     </div>
                     <div class="flex-1 overflow-y-auto p-0">
                         <table class="w-full text-sm text-left">
@@ -155,18 +251,37 @@
             <!-- TAB 2: Papan Jadwal -->
             <div id="content-schedule" class="tab-content hidden h-full flex-col pb-8">
                 <div class="bg-white p-3 rounded-xl shadow-sm border border-slate-200 mb-4 flex flex-wrap justify-between items-center gap-3 shrink-0">
-                    <div class="flex items-center space-x-2"><div class="h-8 w-8 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-600"><i class="fa-solid fa-robot"></i></div><div><h3 class="font-bold text-sm text-slate-800 leading-tight">Board Builder</h3><p class="text-[10px] text-slate-500">Susun manual / AI</p></div></div>
-                    <div class="flex space-x-2">
-                        <button onclick="autoGenerateSchedule()" class="bg-indigo-600 hover:bg-indigo-700 shadow-sm text-white px-3 py-1.5 rounded-lg text-xs font-bold transition-colors"><i class="fa-solid fa-wand-magic-sparkles mr-1.5"></i>Auto-Pilot</button>
-                        <button onclick="exportScheduleToExcel()" class="bg-emerald-600 hover:bg-emerald-700 shadow-sm text-white px-3 py-1.5 rounded-lg text-xs font-bold transition-colors"><i class="fa-solid fa-file-excel mr-1.5"></i>Excel</button>
-                        <!-- Tombol Export PNG -->
-                        <button id="btn-export-png" onclick="exportScheduleToPNG()" class="bg-sky-600 hover:bg-sky-700 shadow-sm text-white px-3 py-1.5 rounded-lg text-xs font-bold transition-colors"><i class="fa-solid fa-image mr-1.5"></i>Unduh PNG</button>
+                    <div class="flex items-center space-x-3">
+                        <div class="h-8 w-8 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-600" aria-hidden="true"><i class="fa-solid fa-robot"></i></div>
+                        <div>
+                            <h3 class="font-bold text-sm text-slate-800 leading-tight">Board Builder</h3>
+                            <p class="text-[10px] text-slate-500">Susun manual / AI</p>
+                        </div>
+                        <div class="ml-2">
+                            <select id="schedule-class-filter" class="border border-slate-300 rounded-lg p-1.5 text-xs bg-white focus:ring-2 focus:ring-indigo-500 font-bold text-indigo-700" onchange="renderScheduleTable()" aria-label="Saring Kelas">
+                                <option value="all">Semua Kelas (Jadwal Master)</option>
+                            </select>
+                        </div>
+                        <!-- Tombol Undo -->
+                        <button id="btn-undo" onclick="triggerUndo()" class="hidden bg-amber-50 hover:bg-amber-100 text-amber-700 border border-amber-200 px-2.5 py-1.5 rounded-lg text-xs font-bold transition-all" aria-label="Batal (Undo)"><i class="fa-solid fa-rotate-left mr-1" aria-hidden="true"></i>Batal (Undo)</button>
+                    </div>
+                    <div class="flex space-x-2 action-bar">
+                        <button onclick="autoGenerateSchedule()" class="bg-indigo-600 hover:bg-indigo-700 shadow-sm text-white px-3 py-1.5 rounded-lg text-xs font-bold transition-colors" aria-label="Auto Pilot"><i class="fa-solid fa-wand-magic-sparkles mr-1.5" aria-hidden="true"></i>Auto-Pilot</button>
+                        <button onclick="exportScheduleToExcel()" class="bg-emerald-600 hover:bg-emerald-700 shadow-sm text-white px-3 py-1.5 rounded-lg text-xs font-bold transition-colors" aria-label="Ekspor CSV"><i class="fa-solid fa-file-excel mr-1.5" aria-hidden="true"></i>Ekspor CSV (Excel)</button>
+                        <button onclick="exportScheduleToPDF()" class="bg-rose-600 hover:bg-rose-700 shadow-sm text-white px-3 py-1.5 rounded-lg text-xs font-bold transition-colors" aria-label="Cetak PDF"><i class="fa-solid fa-file-pdf mr-1.5" aria-hidden="true"></i>Cetak PDF A4</button>
                     </div>
                 </div>
-                
+
+                <div class="text-[11px] text-slate-500 mb-2 px-1 flex justify-between items-center">
+                    <span><i class="fa-solid fa-circle-info text-indigo-500 mr-1.5" aria-hidden="true"></i><strong>Tips Mobile:</strong> Ketuk jadwal satu kali untuk mengaktifkan Mode Pindah. Seluruh sel target kosong yang valid akan otomatis ter-highlight ungu "⬇️ Pindahkan".</span>
+                    <span class="text-[10px] font-bold text-purple-600 bg-purple-50 border border-purple-200 px-2 py-0.5 rounded-md"><i class="fa-solid fa-mobile-screen mr-1" aria-hidden="true"></i>Pengaman Layar Sentuh Aktif</span>
+                </div>
+
                 <div class="flex-1 overflow-auto bg-white border border-slate-200 rounded-xl shadow-sm relative">
-                    <table class="w-full text-sm text-left excel-table table-fixed min-w-[800px]">
-                        <thead class="text-slate-600 text-xs"><tr id="schedule-header"></tr></thead>
+                    <table id="schedule-table-id" class="w-full text-sm text-left excel-table table-fixed min-w-[800px]">
+                        <thead class="text-slate-600 text-xs">
+                            <tr id="schedule-header"></tr>
+                        </thead>
                         <tbody id="schedule-body" class="bg-white"></tbody>
                     </table>
                 </div>
@@ -176,25 +291,66 @@
             <div id="content-settings" class="tab-content hidden w-full space-y-6 pb-12">
                 <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
                     <div class="p-4 border-b border-slate-200 bg-slate-50 flex justify-between items-center">
-                        <div><h3 class="font-bold text-slate-800"><i class="fa-solid fa-clock text-indigo-500 mr-2"></i>Struktur Waktu</h3><p class="text-[10px] text-slate-500 mt-1">Otomatis kalkulasi jam</p></div>
-                        <div class="flex items-center space-x-3 bg-white p-2 rounded-lg border border-slate-200 shadow-sm"><label class="text-xs font-bold text-slate-700">Jam Mulai:</label><input type="time" id="setting-start-time" class="border border-slate-300 rounded p-1 text-sm outline-none font-mono text-indigo-700 font-bold" onchange="recalculateAllTimes(true)"></div>
+                        <div>
+                            <h3 class="font-bold text-slate-800"><i class="fa-solid fa-clock text-indigo-500 mr-2" aria-hidden="true"></i>Struktur Waktu</h3>
+                            <p class="text-[10px] text-slate-500 mt-1">Otomatis kalkulasi jam. Gunakan "Sejajar" untuk menjalankan dua agenda sekaligus.</p>
+                        </div>
+                        <div class="flex items-center space-x-3 bg-white p-2 rounded-lg border border-slate-200 shadow-sm">
+                            <label class="text-xs font-bold text-slate-700">Jam Mulai:</label>
+                            <input type="time" id="setting-start-time" class="border border-slate-300 rounded p-1 text-sm outline-none font-mono text-indigo-700 font-bold" onchange="recalculateAllTimes(true)">
+                        </div>
                     </div>
                     <div class="p-0 overflow-x-auto">
                         <table class="w-full text-xs text-left">
-                            <thead class="bg-slate-100 border-b border-slate-200"><tr><th class="p-3 text-center w-24">Durasi (Mnt)</th><th class="p-3 text-center text-[10px]">Waktu</th><th class="p-3 text-center">Jenis</th><th class="p-3 text-center">Hari</th><th class="p-3 text-center w-24">Target Kelas</th><th class="p-3 text-center">Label</th><th class="p-3 text-center">Urutan</th><th class="p-3 text-center w-16">Aksi</th></tr></thead>
+                            <thead class="bg-slate-100 border-b border-slate-200">
+                                <tr>
+                                    <th class="p-3 text-center w-20">Durasi (Mnt)</th>
+                                    <th class="p-3 text-center text-[10px]">Waktu</th>
+                                    <th class="p-3 text-center w-16">Sejajar</th>
+                                    <th class="p-3 text-center">Jenis</th>
+                                    <th class="p-3 text-center">Hari</th>
+                                    <th class="p-3 text-center w-24">Target Kelas</th>
+                                    <th class="p-3 text-center">Label</th>
+                                    <th class="p-3 text-center">Urutan</th>
+                                    <th class="p-3 text-center w-16">Aksi</th>
+                                </tr>
+                            </thead>
                             <tbody id="row-structure-list" class="divide-y divide-slate-100"></tbody>
                         </table>
                     </div>
                     <div class="p-4 bg-slate-50 border-t border-slate-200 flex justify-between items-center">
-                        <button onclick="addTimeRow()" class="bg-white border border-slate-300 px-3 py-1.5 rounded-lg text-xs font-bold text-slate-700 shadow-sm"><i class="fa-solid fa-plus mr-1"></i>Tambah Baris</button>
-                        <button onclick="recalculateAllTimes(true)" class="bg-indigo-600 text-white px-4 py-1.5 rounded-lg text-xs font-bold shadow-sm">Simpan Waktu</button>
+                        <button onclick="addTimeRow()" class="bg-white border border-slate-300 px-3 py-1.5 rounded-lg text-xs font-bold text-slate-700 shadow-sm" aria-label="Tambah Baris"><i class="fa-solid fa-plus mr-1" aria-hidden="true"></i>Tambah Baris</button>
+                        <button onclick="recalculateAllTimes(true)" class="bg-indigo-600 text-white px-4 py-1.5 rounded-lg text-xs font-bold shadow-sm" aria-label="Simpan Waktu">Simpan Waktu</button>
                     </div>
                 </div>
 
                 <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <div class="bg-white p-5 rounded-xl shadow-sm border border-slate-200"><h3 class="font-bold text-sm text-slate-800 mb-1"><i class="fa-solid fa-floppy-disk text-emerald-500 mr-2"></i>Backup Lokal (.json)</h3><div class="space-y-3 mt-4"><button onclick="exportDataToJSON()" class="w-full bg-emerald-50 text-emerald-700 border font-bold py-2 rounded-lg text-xs"><i class="fa-solid fa-download mr-1.5"></i>Download File</button><input type="file" id="import-file" accept=".json" class="hidden" onchange="importDataFromJSON(event)"><button onclick="document.getElementById('import-file').click()" class="w-full bg-slate-50 text-slate-700 border font-bold py-2 rounded-lg text-xs"><i class="fa-solid fa-upload mr-1.5"></i>Pulihkan dari File</button></div></div>
-                    <div class="bg-white p-5 rounded-xl shadow-sm border border-indigo-200 bg-indigo-50/30"><h3 class="font-bold text-sm text-indigo-800 mb-1"><i class="fa-solid fa-cloud text-indigo-500 mr-2"></i>Sinkronisasi Cloud</h3><div class="space-y-2 mt-4"><input type="text" id="gas-url" placeholder="URL Apps Script..." class="w-full border rounded p-2 text-xs"><button onclick="saveGasUrl()" class="w-full text-indigo-600 text-[10px] font-bold text-right hover:underline mb-2">Simpan URL</button><div class="flex gap-2"><button onclick="pushToCloud()" class="flex-1 bg-indigo-600 text-white font-bold py-2 rounded-lg text-xs"><i class="fa-solid fa-cloud-arrow-up mr-1"></i>Simpan</button><button onclick="pullFromCloud()" class="flex-1 bg-white text-indigo-700 border border-indigo-300 font-bold py-2 rounded-lg text-xs"><i class="fa-solid fa-cloud-arrow-down mr-1"></i>Tarik</button></div></div></div>
-                    <div class="bg-white p-5 rounded-xl shadow-sm border border-red-200 bg-red-50/30"><h3 class="font-bold text-sm text-red-800 mb-1"><i class="fa-solid fa-triangle-exclamation text-red-500 mr-2"></i>Zona Bahaya</h3><div class="space-y-2 mt-4"><button onclick="clearScheduleOnly()" class="w-full bg-white border border-red-300 text-red-700 font-bold py-2 rounded-lg text-xs">Kosongkan Jadwal Saja</button><button onclick="hardResetData()" class="w-full bg-red-600 text-white font-bold py-2 rounded-lg text-xs"><i class="fa-solid fa-skull mr-1"></i>Hapus Semua Data</button></div></div>
+                    <div class="bg-white p-5 rounded-xl shadow-sm border border-slate-200">
+                        <h3 class="font-bold text-sm text-slate-800 mb-1"><i class="fa-solid fa-floppy-disk text-emerald-500 mr-2" aria-hidden="true"></i>Backup Lokal (.json)</h3>
+                        <div class="space-y-3 mt-4">
+                            <button onclick="exportDataToJSON()" class="w-full bg-emerald-50 text-emerald-700 border font-bold py-2 rounded-lg text-xs" aria-label="Unduh File"><i class="fa-solid fa-download mr-1.5" aria-hidden="true"></i>Download File</button>
+                            <input type="file" id="import-file" accept=".json" class="hidden" onchange="importDataFromJSON(event)">
+                            <button onclick="document.getElementById('import-file').click()" class="w-full bg-slate-50 text-slate-700 border font-bold py-2 rounded-lg text-xs" aria-label="Pulihkan Data"><i class="fa-solid fa-upload mr-1.5" aria-hidden="true"></i>Pulihkan dari File</button>
+                        </div>
+                    </div>
+                    <div class="bg-white p-5 rounded-xl shadow-sm border border-indigo-200 bg-indigo-50/30">
+                        <h3 class="font-bold text-sm text-indigo-800 mb-1"><i class="fa-solid fa-cloud text-indigo-500 mr-2" aria-hidden="true"></i>Sinkronisasi Cloud</h3>
+                        <div class="space-y-2 mt-4">
+                            <input type="text" id="gas-url" placeholder="URL Apps Script..." class="w-full border rounded p-2 text-xs">
+                            <button onclick="saveGasUrl()" class="w-full text-indigo-600 text-[10px] font-bold text-right hover:underline mb-2" aria-label="Simpan URL Cloud">Simpan URL</button>
+                            <div class="flex gap-2">
+                                <button onclick="pushToCloud(event)" class="flex-1 bg-indigo-600 text-white font-bold py-2 rounded-lg text-xs" aria-label="Simpan Cloud"><i class="fa-solid fa-cloud-arrow-up mr-1" aria-hidden="true"></i>Simpan</button>
+                                <button onclick="pullFromCloud(event)" class="flex-1 bg-white text-indigo-700 border border-indigo-300 font-bold py-2 rounded-lg text-xs" aria-label="Tarik Cloud"><i class="fa-solid fa-cloud-arrow-down mr-1" aria-hidden="true"></i>Tarik</button>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="bg-white p-5 rounded-xl shadow-sm border border-red-200 bg-red-50/30">
+                        <h3 class="font-bold text-sm text-red-800 mb-1"><i class="fa-solid fa-triangle-exclamation text-red-500 mr-2" aria-hidden="true"></i>Zona Bahaya</h3>
+                        <div class="space-y-2 mt-4">
+                            <button onclick="clearScheduleOnly()" class="w-full bg-white border border-red-300 text-red-700 font-bold py-2 rounded-lg text-xs" aria-label="Kosongkan Jadwal">Kosongkan Jadwal Saja</button>
+                            <button onclick="hardResetData()" class="w-full bg-red-600 text-white font-bold py-2 rounded-lg text-xs" aria-label="Hapus Semua Data"><i class="fa-solid fa-skull mr-1" aria-hidden="true"></i>Hapus Semua Data</button>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -204,11 +360,45 @@
 
     <script>
         let classes = [], assignments = [], schedule = [], rows = [], startTime = "07:00"; 
-        const DEFAULT_DAYS = ['Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat'];
+        const DEFAULT_DAYS = ['SENIN', 'SELASA', 'RABU', 'KAMIS', 'JUMAT'];
         let draggedPlot = null, currentModalData = null, currentRowForClassModal = null, editingAssignmentId = null;
         let assignMap = {}, schedMap = {}, teacherSlotMap = {}, teacherBlocks = {};
+        
+        // State Tap-to-Move
+        let mobileMoveSource = null;
 
-        window.onload = () => { loadData(); if(!rows.length) generateDefaultRows(); recalculateAllTimes(false); refreshData(); switchTab('teaching'); }
+        // XSS Protection Sanitizer
+        function escapeHTML(str) {
+            if (!str) return '';
+            return str.toString()
+                .replace(/&/g, "&amp;")
+                .replace(/</g, "&lt;")
+                .replace(/>/g, "&gt;")
+                .replace(/"/g, "&quot;")
+                .replace(/'/g, "&#039;");
+        }
+
+        // Normalisasi String Nama Guru
+        function normalizeString(str) {
+            if (!str) return '';
+            return str.trim().replace(/\s+/g, ' ').toUpperCase();
+        }
+
+        // Jalankan saat load web
+        window.onload = () => { 
+            loadData(); 
+            if(!rows.length) generateDefaultRows(); 
+            recalculateAllTimes(false); 
+            refreshData(); 
+            switchTab('teaching'); 
+
+            // Hindari browser memicu menu hold-to-context pada layar sentuh
+            window.addEventListener('contextmenu', function (e) {
+                if (e.target.closest('.slot-filled, .slot-clickable, td, th')) {
+                    e.preventDefault();
+                }
+            }, { passive: false });
+        }
 
         function showToast(msg, isErr=false) {
             const t = document.getElementById('toast'), i = document.getElementById('toast-icon'), m = document.getElementById('toast-msg');
@@ -217,66 +407,192 @@
         }
 
         let confirmAction = null;
-        function showConfirm(msg, action) { document.getElementById('confirm-msg').innerText = msg; confirmAction = action; document.getElementById('confirmModal').classList.remove('hidden'); }
+        function showConfirm(msg, action) { 
+            document.getElementById('confirm-msg').innerText = msg; 
+            confirmAction = action; 
+            document.getElementById('confirmModal').classList.remove('hidden'); 
+        }
         function closeConfirm() { document.getElementById('confirmModal').classList.add('hidden'); confirmAction = null; }
         document.getElementById('btn-confirm-ok').addEventListener('click', () => { if(confirmAction) confirmAction(); closeConfirm(); });
 
         function switchTab(id) {
             document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
             document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active', 'font-bold', 'text-indigo-600', 'bg-indigo-50', 'border-indigo-600'));
-            document.getElementById(`content-${id}`).classList.remove('hidden');
-            document.getElementById(`tab-${id}`).classList.add('active', 'font-bold', 'text-indigo-600', 'bg-indigo-50', 'border-indigo-600');
-            if(id === 'schedule') { rebuildMaps(); renderScheduleTable(); } 
-            else if(id === 'settings') { document.getElementById('setting-start-time').value = startTime; renderRowSettings(); }
+            const content = document.getElementById(`content-${id}`);
+            if (content) content.classList.remove('hidden');
+            const tabBtn = document.getElementById(`tab-${id}`);
+            if (tabBtn) tabBtn.classList.add('active', 'font-bold', 'text-indigo-600', 'bg-indigo-50', 'border-indigo-600');
+            if(id === 'schedule') { 
+                rebuildMaps(); 
+                updateClassFilterOptions();
+                renderScheduleTable(); 
+            } 
+            else if(id === 'settings') { 
+                const settingStartInput = document.getElementById('setting-start-time');
+                if (settingStartInput) settingStartInput.value = startTime; 
+                renderRowSettings(); 
+            }
         }
 
         function timeToMins(tStr) { let [h, m] = tStr.split(':').map(Number); return (h*60)+m; }
         function minsToTime(m) { return `${Math.floor(m/60)%24}`.padStart(2,'0')+':'+`${m%60}`.padStart(2,'0'); }
 
+        // Fungsi Penyingkat Nama Guru Proporsional
+        function abbreviateTeacher(fullName) {
+            if (!fullName) return '';
+            let name = fullName.trim();
+            let degree = '';
+            
+            if (name.includes(',')) {
+                const parts = name.split(',');
+                name = parts[0].trim();
+                degree = parts.slice(1).join(',').trim();
+            }
+
+            const words = name.split(/\s+/).filter(w => w.length > 0);
+            let shortName = name;
+            
+            if (words.length > 1) {
+                const firstWord = words[0];
+                const secondWord = words[1];
+                if (firstWord.length <= 2 && firstWord.endsWith('.')) {
+                    shortName = firstWord + " " + secondWord;
+                } else {
+                    const initial = secondWord.charAt(0).toUpperCase();
+                    shortName = `${firstWord} ${initial}.`;
+                }
+            }
+
+            return degree ? `${shortName}, ${degree}` : shortName;
+        }
+
         function recalculateAllTimes(saveAndRender=false) {
             startTime = document.getElementById('setting-start-time').value || "07:00";
-            let curMins = timeToMins(startTime); const inps = document.querySelectorAll('.rd-inp'), prevs = document.querySelectorAll('.time-preview');
-            if(inps.length === rows.length) rows.forEach((r, i) => r.duration = parseInt(inps[i].value) || 0);
+            let curMins = timeToMins(startTime);
+            let groupStartMins = curMins;
+            let maxGroupEndMins = curMins;
+
+            const inps = document.querySelectorAll('.rd-inp');
+            if (inps.length === rows.length) {
+                rows.forEach((r, i) => r.duration = parseInt(inps[i].value) || 0);
+            }
+
             rows.forEach((r, i) => {
-                let start = minsToTime(curMins); curMins += (parseInt(r.duration) || 0);
-                r.time = `${start} - ${minsToTime(curMins)}`;
-                if(prevs[i]) prevs[i].innerText = r.time;
+                if (r.parallel && i > 0) {
+                    let start = minsToTime(groupStartMins);
+                    let endMins = groupStartMins + (parseInt(r.duration) || 0);
+                    r.time = `${start} - ${minsToTime(endMins)}`;
+                    r.startMins = groupStartMins;
+                    r.endMins = endMins;
+                    if (endMins > maxGroupEndMins) {
+                        maxGroupEndMins = endMins;
+                    }
+                } else {
+                    curMins = maxGroupEndMins;
+                    groupStartMins = curMins;
+                    let start = minsToTime(curMins);
+                    let endMins = curMins + (parseInt(r.duration) || 0);
+                    r.time = `${start} - ${minsToTime(endMins)}`;
+                    r.startMins = curMins;
+                    r.endMins = endMins;
+                    maxGroupEndMins = endMins;
+                }
             });
+
+            // Perbarui visualisasi waktu di DOM secara langsung (Anti-Kehilangan Fokus Kursor)
+            const previews = document.querySelectorAll('.time-preview');
+            if (previews.length === rows.length) {
+                previews.forEach((p, idx) => {
+                    p.innerText = rows[idx].time;
+                });
+            }
+
             if(saveAndRender) { saveData(); showToast("Waktu diperbarui."); }
         }
 
         function generateDefaultRows() {
             rows = []; let id = 1;
             [{d:40,t:'kbm',l:'1'},{d:40,t:'kbm',l:'2'},{d:40,t:'kbm',l:'3'},{d:20,t:'break',l:'ISTIRAHAT 1'},{d:40,t:'kbm',l:'4'},{d:40,t:'kbm',l:'5'},{d:30,t:'break',l:'ISTIRAHAT 2'},{d:40,t:'kbm',l:'6'},{d:40,t:'kbm',l:'7'}].forEach(x => {
-                rows.push({id:'r'+id++,duration:x.d,type:x.t,label:x.l,days:[...DEFAULT_DAYS],time:'00:00 - 00:00'});
+                rows.push({id:'r'+id++,duration:x.d,type:x.t,label:x.l,days:[...DEFAULT_DAYS],time:'00:00 - 00:00',parallel:false});
             }); recalculateAllTimes();
+        }
+
+        let undoHistory = [];
+        function saveToHistory() {
+            const snapshot = JSON.stringify({classes, assignments, schedule, rows, teacherBlocks, startTime});
+            undoHistory.push(snapshot);
+            if (undoHistory.length > 5) undoHistory.shift(); 
+            document.getElementById('btn-undo').classList.remove('hidden');
+        }
+        function triggerUndo() {
+            if (!undoHistory.length) return showToast("Tidak ada aksi untuk dibatalkan", true);
+            const prev = JSON.parse(undoHistory.pop());
+            classes = prev.classes;
+            assignments = prev.assignments;
+            schedule = prev.schedule;
+            rows = prev.rows;
+            teacherBlocks = prev.teacherBlocks;
+            startTime = prev.startTime;
+            saveData();
+            refreshData();
+            recalculateAllTimes(false);
+            showToast("Aksi dibatalkan!");
+            if (!undoHistory.length) document.getElementById('btn-undo').classList.add('hidden');
         }
 
         function loadData() {
             try {
                 const get = (k) => JSON.parse(localStorage.getItem(k));
-                classes = get('eduPro_classes') || []; assignments = get('eduPro_assignments') || [];
-                schedule = get('eduPro_schedule') || []; rows = get('eduPro_rows') || [];
+                classes = get('eduPro_classes') || []; 
+                assignments = get('eduPro_assignments') || [];
+                schedule = get('eduPro_schedule') || []; 
+                rows = get('eduPro_rows') || [];
                 startTime = localStorage.getItem('eduPro_startTime') || "07:00";
                 teacherBlocks = get('eduPro_teacherBlocks') || {};
-                document.getElementById('gas-url').value = localStorage.getItem('eduPro_gas') || '';
-            } catch(e){}
+
+                schedule.forEach(s => { if(s.day) s.day = s.day.toUpperCase(); });
+                rows.forEach(r => { if(r.days) r.days = r.days.map(d => d.toUpperCase()); });
+                const normalizedBlocks = {};
+                Object.keys(teacherBlocks).forEach(k => {
+                    normalizedBlocks[normalizeString(k)] = (teacherBlocks[k] || []).map(d => d.toUpperCase());
+                });
+                teacherBlocks = normalizedBlocks;
+            } catch(e){
+                console.error("Error loading localStorage data", e);
+            }
+            
+            try {
+                const savedGas = localStorage.getItem('eduPro_gas') || '';
+                const gasInput = document.getElementById('gas-url');
+                if (gasInput) gasInput.value = savedGas;
+            } catch(e) {
+                console.error("Error loading GAS URL from localStorage", e);
+            }
         }
 
         function saveData() {
             const set = (k,v) => localStorage.setItem(k, JSON.stringify(v));
-            set('eduPro_classes', classes); set('eduPro_assignments', assignments);
-            set('eduPro_schedule', schedule); set('eduPro_rows', rows); set('eduPro_teacherBlocks', teacherBlocks);
+            set('eduPro_classes', classes); 
+            set('eduPro_assignments', assignments);
+            set('eduPro_schedule', schedule); 
+            set('eduPro_rows', rows); 
+            set('eduPro_teacherBlocks', teacherBlocks);
             localStorage.setItem('eduPro_startTime', startTime);
         }
 
-        function refreshData() { rebuildMaps(); renderClasses(); renderAssignments(); updateDatalist(); if(window.renderBlockDays) renderBlockDays(); }
+        function refreshData() { rebuildMaps(); renderClasses(); renderAssignments(); updateDatalist(); renderBlockDays(); }
+        
         function rebuildMaps() {
             assignMap={}; schedMap={}; teacherSlotMap={};
             assignments.forEach(a => assignMap[a.id]=a);
             schedule.forEach(s => {
+                if (s.day) s.day = s.day.toUpperCase();
                 schedMap[`${s.day}_${s.rowId}_${s.classId}`] = s;
-                const a = assignMap[s.assignId]; if(a) teacherSlotMap[`${s.day}_${s.rowId}_${a.teacher}`] = (teacherSlotMap[`${s.day}_${s.rowId}_${a.teacher}`]||0)+1;
+                const a = assignMap[s.assignId]; 
+                if(a) {
+                    const normName = normalizeString(a.teacher);
+                    teacherSlotMap[`${s.day}_${s.rowId}_${normName}`] = (teacherSlotMap[`${s.day}_${s.rowId}_${normName}`]||0)+1;
+                }
             });
         }
 
@@ -284,62 +600,108 @@
             const c=document.getElementById('class-list-tags'), s=document.getElementById('asg-class');
             c.innerHTML=''; s.innerHTML='<option value="">-- Pilih --</option>';
             classes.forEach(x => {
-                c.innerHTML+=`<div class="bg-emerald-50 text-emerald-700 border border-emerald-200 text-xs px-2.5 py-1 rounded-md flex items-center font-bold"><span>${x.name}</span><button onclick="removeClass('${x.id}')" class="ml-2 text-emerald-400 hover:text-emerald-700"><i class="fa-solid fa-xmark"></i></button></div>`;
-                s.innerHTML+=`<option value="${x.id}">${x.name}</option>`;
+                c.innerHTML+=`<div class="bg-emerald-50 text-emerald-700 border border-emerald-200 text-xs px-2.5 py-1 rounded-md flex items-center font-bold"><span>${escapeHTML(x.name)}</span><button onclick="removeClass('${x.id}')" class="ml-2 text-emerald-400 hover:text-emerald-700" aria-label="Hapus kelas ${escapeHTML(x.name)}"><i class="fa-solid fa-xmark"></i></button></div>`;
+                s.innerHTML+=`<option value="${x.id}">${escapeHTML(x.name)}</option>`;
             });
         }
+
         function addClass() {
-            const v = document.getElementById('new-class-name').value.trim(); if(!v) return showToast('Nama kosong',true);
-            if(classes.find(c=>c.name.toLowerCase()===v.toLowerCase())) return showToast('Sudah ada',true);
-            classes.push({id:'c_'+Date.now(), name:v.toUpperCase()}); document.getElementById('new-class-name').value='';
+            const v = normalizeString(document.getElementById('new-class-name').value); if(!v) return showToast('Nama kosong',true);
+            if(classes.find(c=>c.name.toUpperCase()===v)) return showToast('Sudah ada',true);
+            saveToHistory();
+            classes.push({id:'c_'+Date.now(), name:v}); document.getElementById('new-class-name').value='';
             saveData(); refreshData(); showToast('Kelas ditambah');
         }
+
         function removeClass(id) {
             showConfirm("Hapus kelas ini? Jadwal dan beban yang terkait akan hilang.", () => {
-                classes=classes.filter(c=>c.id!==id); assignments=assignments.filter(a=>a.classId!==id); schedule=schedule.filter(s=>s.classId!==id);
+                saveToHistory();
+                classes=classes.filter(c=>c.id!==id); 
+                assignments=assignments.filter(a=>a.classId!==id); 
+                schedule=schedule.filter(s=>s.classId!==id);
                 saveData(); refreshData(); showToast('Dihapus');
             });
         }
 
+        function checkCapacityWarning() {
+            const jpVal = parseInt(document.getElementById('asg-jp').value) || 0;
+            const currentTotalJP = assignments.reduce((acc, curr) => acc + (curr.jp || 0), 0) + jpVal;
+            const kbmRows = rows.filter(r => r.type === 'kbm').length;
+            const totalSlotsAvailable = kbmRows * DEFAULT_DAYS.length * (classes.length || 1);
+            const el = document.getElementById('capacity-warning');
+            if (currentTotalJP > totalSlotsAvailable) el.classList.remove('hidden');
+            else el.classList.add('hidden');
+        }
+
         function saveOrUpdateAssignment() {
-            const t=document.getElementById('asg-teacher').value.trim(), s=document.getElementById('asg-subject').value.trim(), c=document.getElementById('asg-class').value, jp=parseInt(document.getElementById('asg-jp').value);
-            if(!t||!s||!c||!jp) return showToast('Lengkapi form',true);
+            const rawTeacher = document.getElementById('asg-teacher').value;
+            const normTeacher = normalizeString(rawTeacher);
+            const s=document.getElementById('asg-subject').value.trim();
+            const c=document.getElementById('asg-class').value;
+            const jp=parseInt(document.getElementById('asg-jp').value);
+            
+            if(!normTeacher||!s||!c||!jp) return showToast('Lengkapi form',true);
+            saveToHistory();
+
             if(editingAssignmentId) {
                 const i = assignments.findIndex(a=>a.id===editingAssignmentId);
-                if(i>-1) assignments[i]={...assignments[i], teacher:t, subject:s, classId:c, jp:jp};
+                if(i>-1) {
+                    const oldTeacherNorm = normalizeString(assignments[i].teacher);
+                    if (oldTeacherNorm !== normTeacher && teacherBlocks[oldTeacherNorm]) {
+                        teacherBlocks[normTeacher] = teacherBlocks[oldTeacherNorm];
+                        delete teacherBlocks[oldTeacherNorm];
+                    }
+                    assignments[i]={...assignments[i], teacher:rawTeacher, subject:s, classId:c, jp:jp};
+                }
                 cancelEditAssignment(); showToast('Diperbarui');
             } else {
-                assignments.push({id:'a_'+Date.now(), teacher:t, subject:s, classId:c, jp:jp});
+                assignments.push({id:'a_'+Date.now(), teacher:rawTeacher, subject:s, classId:c, jp:jp});
                 document.getElementById('asg-subject').value=''; document.getElementById('asg-jp').value=''; document.getElementById('asg-teacher').focus();
                 showToast('Disimpan');
             }
-            saveData(); refreshData(); if(!document.getElementById('content-schedule').classList.contains('hidden')) renderScheduleTable();
+            saveData(); refreshData(); 
+            if(!document.getElementById('content-schedule').classList.contains('hidden')) renderScheduleTable();
         }
+
         function editAssignment(id) {
             const a = assignments.find(x=>x.id===id); if(!a) return; editingAssignmentId=id;
-            ['teacher','subject','class','jp'].forEach(k => document.getElementById(`asg-${k}`).value = a[k==='class'?'classId':k]);
-            const b=document.getElementById('btn-save-asg'); b.innerHTML='<i class="fa-solid fa-check mr-1.5"></i>Update'; b.className=b.className.replace('bg-indigo-600','bg-amber-500').replace('hover:bg-indigo-700','hover:bg-amber-600');
+            ['teacher','subject','class','jp'].forEach(k => {
+                const el = document.getElementById(`asg-${k}`);
+                if (el) el.value = a[k==='class'?'classId':k];
+            });
+            const b=document.getElementById('btn-save-asg'); b.innerHTML='<i class="fa-solid fa-check mr-1.5"></i>Update'; b.className=b.className.replace('bg-indigo-600','bg-indigo-500').replace('hover:bg-indigo-700','hover:bg-indigo-600');
             document.getElementById('btn-cancel-edit-asg').classList.remove('hidden'); document.getElementById('asg-teacher').focus(); window.scrollTo({top:0});
         }
         function cancelEditAssignment() {
-            editingAssignmentId=null; ['teacher','subject','class','jp'].forEach(k => document.getElementById(`asg-${k}`).value = '');
-            const b=document.getElementById('btn-save-asg'); b.innerHTML='<i class="fa-solid fa-save mr-1.5"></i>Simpan'; b.className=b.className.replace('bg-amber-500','bg-indigo-600').replace('hover:bg-amber-600','hover:bg-indigo-700');
+            editingAssignmentId=null; ['teacher','subject','class','jp'].forEach(k => {
+                const el = document.getElementById(`asg-${k}`);
+                if (el) el.value = '';
+            });
+            const b=document.getElementById('btn-save-asg'); b.innerHTML='<i class="fa-solid fa-save mr-1.5"></i>Simpan'; b.className=b.className.replace('bg-indigo-500','bg-indigo-600').replace('hover:bg-indigo-600','hover:bg-indigo-700');
             document.getElementById('btn-cancel-edit-asg').classList.add('hidden');
         }
-        function removeAssignment(id) { showConfirm("Hapus beban mengajar ini?", () => { assignments=assignments.filter(a=>a.id!==id); schedule=schedule.filter(s=>s.assignId!==id); saveData(); refreshData(); }); }
+        function removeAssignment(id) { 
+            showConfirm("Hapus beban mengajar ini?", () => { 
+                saveToHistory();
+                assignments=assignments.filter(a=>a.id!==id); 
+                schedule=schedule.filter(s=>s.assignId!==id); 
+                saveData(); refreshData(); 
+            }); 
+        }
 
         function renderAssignments() {
             const term=document.getElementById('search-asg').value.toLowerCase(); let h='', c=0;
             assignments.filter(a=>a.teacher.toLowerCase().includes(term)||a.subject.toLowerCase().includes(term)).forEach(a => {
                 const cls=classes.find(x=>x.id===a.classId), p=schedule.filter(s=>s.assignId===a.id).length;
-                h+=`<tr class="hover:bg-slate-50 ${p>a.jp?'bg-red-50':(p===a.jp?'bg-green-50':'')}"><td class="px-4 py-2 font-semibold text-slate-800">${a.teacher}</td><td class="px-4 py-2 text-slate-600">${a.subject}</td><td class="px-4 py-2 text-center text-slate-600 font-bold">${cls?cls.name:'-'}</td><td class="px-4 py-2 text-center"><span class="px-2 py-0.5 rounded ${p===a.jp?'bg-green-200 text-green-800':(p>a.jp?'bg-red-200 text-red-800':'bg-slate-200 text-slate-700')} text-xs font-bold">${p}/${a.jp}</span></td><td class="px-4 py-2 text-center"><div class="flex justify-center items-center space-x-1.5"><button onclick="editAssignment('${a.id}')" class="text-amber-500 p-1.5 bg-amber-50 rounded"><i class="fa-solid fa-pen text-[10px]"></i></button><button onclick="removeAssignment('${a.id}')" class="text-red-500 p-1.5 bg-red-50 rounded"><i class="fa-solid fa-trash text-[10px]"></i></button></div></td></tr>`; c++;
+                h+=`<tr class="hover:bg-slate-50 ${p>a.jp?'bg-red-50':(p===a.jp?'bg-green-50':'')}"><td class="px-4 py-2 font-semibold text-slate-800">${escapeHTML(a.teacher)}</td><td class="px-4 py-2 text-slate-600">${escapeHTML(a.subject)}</td><td class="px-4 py-2 text-center text-slate-600 font-bold">${cls?escapeHTML(cls.name):'-'}</td><td class="px-4 py-2 text-center"><span class="px-2 py-0.5 rounded ${p===a.jp?'bg-green-200 text-green-800':(p>a.jp?'bg-red-200 text-red-800':'bg-slate-200 text-slate-700')} text-xs font-bold">${p}/${a.jp}</span></td><td class="px-4 py-2 text-center"><div class="flex justify-center items-center space-x-1.5"><button onclick="editAssignment('${a.id}')" class="text-amber-500 p-1.5 bg-amber-50 rounded" aria-label="Ubah"><i class="fa-solid fa-pen text-[10px]"></i></button><button onclick="removeAssignment('${a.id}')" class="text-red-500 p-1.5 bg-red-50 rounded" aria-label="Hapus"><i class="fa-solid fa-trash text-[10px]"></i></button></div></td></tr>`; c++;
             });
             document.getElementById('assignment-list').innerHTML=h; document.getElementById('total-asg-count').innerText=c+' Data';
         }
+
         function updateDatalist() {
             const dl=document.getElementById('teacher-list-data'), bs=document.getElementById('block-teacher');
             let dlH='', bsH='<option value="">-- Pilih Guru --</option>', ts=[...new Set(assignments.map(a=>a.teacher))].sort();
-            ts.forEach(t=>{dlH+=`<option value="${t}">`; bsH+=`<option value="${t}">${t}</option>`;});
+            ts.forEach(t=>{dlH+=`<option value="${escapeHTML(t)}">`; bsH+=`<option value="${escapeHTML(t)}">${escapeHTML(t)}</option>`;});
             dl.innerHTML=dlH; if(bs){ const v=bs.value; bs.innerHTML=bsH; if(ts.includes(v)) bs.value=v; else {bs.value=""; loadTeacherBlock();} }
         }
 
@@ -347,43 +709,68 @@
             const c=document.getElementById('block-days-container'); if(!c) return;
             c.innerHTML=DEFAULT_DAYS.map(d=>`<label class="flex items-center space-x-1.5 p-1.5 bg-slate-50 border border-slate-200 rounded cursor-pointer hover:bg-slate-100 flex-1 justify-center"><input type="checkbox" value="${d}" class="block-day-cb w-3 h-3 text-rose-500 focus:ring-rose-500"><span class="text-[11px] font-bold text-slate-600">${d}</span></label>`).join(''); renderActiveBlocks();
         }
-        function loadTeacherBlock() { const t=document.getElementById('block-teacher').value; document.querySelectorAll('.block-day-cb').forEach(c=>c.checked=t&&teacherBlocks[t]?.includes(c.value)); }
+        function loadTeacherBlock() { 
+            const t=document.getElementById('block-teacher').value; 
+            const tNorm = normalizeString(t);
+            document.querySelectorAll('.block-day-cb').forEach(c=>c.checked=t&&teacherBlocks[tNorm]?.includes(c.value)); 
+        }
         function saveTeacherBlock() {
             const t=document.getElementById('block-teacher').value; if(!t) return showToast("Pilih guru!",true);
+            saveToHistory();
+            const tNorm = normalizeString(t);
             const ds=Array.from(document.querySelectorAll('.block-day-cb:checked')).map(c=>c.value);
-            if(!ds.length) { delete teacherBlocks[t]; showToast("Block dihapus"); } else { teacherBlocks[t]=ds; showToast("Disimpan"); }
+            if(!ds.length) { delete teacherBlocks[tNorm]; showToast("Block dihapus"); } else { teacherBlocks[tNorm]=ds; showToast("Disimpan"); }
             saveData(); renderActiveBlocks(); document.getElementById('block-teacher').value=''; document.querySelectorAll('.block-day-cb').forEach(c=>c.checked=false);
         }
         function renderActiveBlocks() {
             const c=document.getElementById('active-blocks-container'); if(!c) return; let h=''; const ts=Object.keys(teacherBlocks);
-            ts.forEach(t=>{ if(teacherBlocks[t]?.length) h+=`<div class="flex justify-between items-center bg-rose-50 p-2 rounded-lg"><div class="truncate"><div class="text-xs font-bold text-rose-800">${t}</div><div class="text-[10px] text-rose-600"><i class="fa-solid fa-ban mr-1"></i>${teacherBlocks[t].join(', ')}</div></div><button onclick="removeTeacherBlock('${t}')" class="text-rose-400 p-1"><i class="fa-solid fa-trash text-xs"></i></button></div>`; });
+            ts.forEach(tNorm=>{ 
+                const originalAsg = assignments.find(x => normalizeString(x.teacher) === tNorm);
+                const dispName = originalAsg ? originalAsg.teacher : tNorm;
+                if(teacherBlocks[tNorm]?.length) h+=`<div class="flex justify-between items-center bg-rose-50 p-2 rounded-lg"><div class="truncate"><div class="text-xs font-bold text-rose-800">${escapeHTML(dispName)}</div><div class="text-[10px] text-rose-600"><i class="fa-solid fa-ban mr-1"></i>${teacherBlocks[tNorm].join(', ')}</div></div><button onclick="removeTeacherBlock('${tNorm}')" class="text-rose-400 p-1" aria-label="Hapus block"><i class="fa-solid fa-trash text-xs"></i></button></div>`; 
+            });
             c.innerHTML=h||'<div class="text-xs text-slate-400 text-center py-3 italic">Tidak ada blokir</div>'; document.getElementById('total-blocks').innerText=ts.length+' Guru';
         }
-        function removeTeacherBlock(t) { delete teacherBlocks[t]; saveData(); renderActiveBlocks(); }
+        function removeTeacherBlock(tNorm) { saveToHistory(); delete teacherBlocks[tNorm]; saveData(); renderActiveBlocks(); }
 
-        function addTimeRow() { rows.push({id:'r'+Date.now(), duration:40, time:'', type:'kbm', days:[...DEFAULT_DAYS], label:'Baru'}); recalculateAllTimes(true); renderRowSettings(); }
-        function deleteTimeRow(id) { showConfirm("Hapus baris waktu ini?", () => { rows=rows.filter(r=>r.id!==id); schedule=schedule.filter(s=>s.rowId!==id); recalculateAllTimes(true); renderRowSettings(); }); }
-        function moveRow(i, d) { if(i+d<0||i+d>=rows.length) return; let t=rows[i]; rows[i]=rows[i+d]; rows[i+d]=t; recalculateAllTimes(true); renderRowSettings(); }
+        function addTimeRow() { saveToHistory(); rows.push({id:'r'+Date.now(), duration:40, time:'', type:'kbm', days:[...DEFAULT_DAYS], label:'Baru', parallel:false}); recalculateAllTimes(true); renderRowSettings(); }
+        function deleteTimeRow(id) { showConfirm("Hapus baris waktu ini?", () => { saveToHistory(); rows=rows.filter(r=>r.id!==id); schedule=schedule.filter(s=>s.rowId!==id); recalculateAllTimes(true); renderRowSettings(); }); }
+        function moveRow(i, d) { if(i+d<0||i+d>=rows.length) return; saveToHistory(); let t=rows[i]; rows[i]=rows[i+d]; rows[i+d]=t; recalculateAllTimes(true); renderRowSettings(); }
+        function toggleParallel(id, isChecked) {
+            const r = rows.find(x=>x.id===id);
+            if (r) { saveToHistory(); r.parallel = isChecked; recalculateAllTimes(true); renderRowSettings(); }
+        }
         function toggleDayBtn(b) {
             const d=b.getAttribute('data-day'), r=rows.find(x=>x.id===b.closest('tr').getAttribute('data-rid')); if(!r) return;
+            saveToHistory();
             if(!r.days) r.days=[...DEFAULT_DAYS]; r.days.includes(d) ? r.days=r.days.filter(x=>x!==d) : r.days.push(d); saveData();
             b.className=`day-btn mx-0.5 px-1.5 py-0.5 text-[9px] rounded border ${r.days.includes(d)?'bg-green-100 text-green-700 font-bold border-green-300':'bg-slate-50 text-slate-300 border-slate-200'}`;
         }
-        function updateRowData(id, k, v) { const r=rows.find(x=>x.id===id); if(r) {r[k]=v; saveData();} }
+        function updateRowData(id, k, v) { const r=rows.find(x=>x.id===id); if(r) {saveToHistory(); r[k]=v; saveData();} }
 
         function renderRowSettings() {
             document.getElementById('row-structure-list').innerHTML = rows.map((r, i) => {
                 let dh = DEFAULT_DAYS.map(d=>`<button type="button" onclick="toggleDayBtn(this)" data-day="${d}" class="day-btn mx-0.5 px-1.5 py-0.5 text-[9px] rounded border ${(!r.days||r.days.includes(d))?'bg-green-100 text-green-700 font-bold border-green-300':'bg-slate-50 text-slate-300 border-slate-200'}">${d[0]}</button>`).join('');
                 let cT = "Semua Kelas", cC = "bg-indigo-50 text-indigo-700 border-indigo-200";
                 if(r.targetClasses&&!r.targetClasses.length){cT="Nonaktif"; cC="bg-red-50 text-red-700";} else if(r.targetClasses&&r.targetClasses.length<classes.length){cT=`${r.targetClasses.length} Kls`; cC="bg-amber-50 text-amber-700";}
-                return `<tr class="hover:bg-slate-50" data-rid="${r.id}"><td class="p-2"><input type="number" min="1" value="${r.duration}" class="rd-inp w-full border rounded p-1.5 text-xs text-center outline-none" oninput="recalculateAllTimes()"></td><td class="p-2 text-center time-preview text-[10px] font-bold text-slate-500 bg-slate-100 rounded">${r.time}</td><td class="p-2"><select class="w-full border rounded p-1.5 text-xs outline-none bg-white" onchange="updateRowData('${r.id}', 'type', this.value)"><option value="kbm" ${r.type==='kbm'?'selected':''}>KBM</option><option value="break" ${r.type==='break'?'selected':''}>Break</option></select></td><td class="p-2 text-center flex justify-center mt-1.5">${dh}</td><td class="p-2 text-center"><button onclick="openRowClassModal('${r.id}')" class="px-2 py-1.5 text-[10px] font-bold border rounded w-full truncate ${cC}">${cT}</button></td><td class="p-2"><input type="text" value="${r.label}" class="w-full border rounded p-1.5 text-xs bg-white outline-none" onchange="updateRowData('${r.id}', 'label', this.value)"></td><td class="p-2 text-center"><button onclick="moveRow(${i},-1)" class="px-2 py-1 bg-slate-100 border rounded-l-md"><i class="fa-solid fa-arrow-up text-[10px]"></i></button><button onclick="moveRow(${i},1)" class="px-2 py-1 bg-slate-100 border-y border-r rounded-r-md"><i class="fa-solid fa-arrow-down text-[10px]"></i></button></td><td class="p-2 text-center"><button onclick="deleteTimeRow('${r.id}')" class="text-red-500 p-1 bg-red-50 rounded"><i class="fa-solid fa-trash"></i></button></td></tr>`;
+                return `<tr class="hover:bg-slate-50" data-rid="${r.id}">
+                    <td class="p-2"><input type="number" min="1" value="${r.duration}" class="rd-inp w-full border rounded p-1.5 text-xs text-center outline-none" oninput="recalculateAllTimes()"></td>
+                    <td class="p-2 text-center time-preview text-[10px] font-bold text-slate-500 bg-slate-100 rounded">${r.time}</td>
+                    <td class="p-2 text-center"><input type="checkbox" ${r.parallel?'checked':''} onchange="toggleParallel('${r.id}', this.checked)" class="w-4 h-4 rounded text-indigo-600 focus:ring-indigo-500" aria-label="Parallel"></td>
+                    <td class="p-2"><select class="w-full border rounded p-1.5 text-xs outline-none bg-white" onchange="updateRowData('${r.id}', 'type', this.value)"><option value="kbm" ${r.type==='kbm'?'selected':''}>KBM</option><option value="break" ${r.type==='break'?'selected':''}>Break</option></select></td>
+                    <td class="p-2 text-center flex justify-center mt-1.5">${dh}</td>
+                    <td class="p-2 text-center"><button onclick="openRowClassModal('${r.id}')" class="px-2 py-1.5 text-[10px] font-bold border rounded w-full truncate ${cC}">${cT}</button></td>
+                    <td class="p-2"><input type="text" value="${escapeHTML(r.label)}" class="w-full border rounded p-1.5 text-xs bg-white outline-none" onchange="updateRowData('${r.id}', 'label', this.value)"></td>
+                    <td class="p-2 text-center"><button onclick="moveRow(${i},-1)" class="px-2 py-1 bg-slate-100 border rounded-l-md" aria-label="Naik"><i class="fa-solid fa-arrow-up text-[10px]"></i></button><button onclick="moveRow(${i},1)" class="px-2 py-1 bg-slate-100 border-y border-r rounded-r-md" aria-label="Turun"><i class="fa-solid fa-arrow-down text-[10px]"></i></button></td>
+                    <td class="p-2 text-center"><button onclick="deleteTimeRow('${r.id}')" class="text-red-500 p-1 bg-red-50 rounded" aria-label="Hapus"><i class="fa-solid fa-trash"></i></button></td>
+                </tr>`;
             }).join('');
         }
 
         function openRowClassModal(rId) {
             currentRowForClassModal=rId; const r=rows.find(x=>x.id===rId); if(!r) return;
             const c=document.getElementById('rcm-classes-container'), a=!r.targetClasses||r.targetClasses.length===classes.length;
-            c.innerHTML = classes.length ? classes.map(cls=>`<label class="flex items-center space-x-3 p-2.5 hover:bg-slate-100 rounded-lg cursor-pointer"><input type="checkbox" value="${cls.id}" class="rcm-class-cb w-4 h-4 text-indigo-600" ${a||r.targetClasses?.includes(cls.id)?'checked':''} onchange="checkRcmAllState()"><span class="text-xs font-bold">${cls.name}</span></label>`).join('') : '<p class="text-xs text-slate-500 p-2">Belum ada kelas.</p>';
+            c.innerHTML = classes.length ? classes.map(cls=>`<label class="flex items-center space-x-3 p-2.5 hover:bg-slate-100 rounded-lg cursor-pointer"><input type="checkbox" value="${cls.id}" class="rcm-class-cb w-4 h-4 text-indigo-600" ${a||r.targetClasses?.includes(cls.id)?'checked':''} onchange="checkRcmAllState()"><span class="text-xs font-bold">${escapeHTML(cls.name)}</span></label>`).join('') : '<p class="text-xs text-slate-500 p-2">Belum ada kelas.</p>';
             document.getElementById('rcm-all-classes').checked=a; document.getElementById('rowClassModal').classList.remove('hidden');
         }
         function toggleAllRowClasses(c) { document.querySelectorAll('.rcm-class-cb').forEach(cb=>cb.checked=c); }
@@ -391,46 +778,153 @@
         function closeRowClassModal() { document.getElementById('rowClassModal').classList.add('hidden'); currentRowForClassModal=null; }
         function saveRowClassSelection() {
             const r=rows.find(x=>x.id===currentRowForClassModal); if(r) {
+                saveToHistory();
                 const s=Array.from(document.querySelectorAll('.rcm-class-cb:checked')).map(c=>c.value);
                 if(s.length===classes.length) delete r.targetClasses; else r.targetClasses=s; saveData(); renderRowSettings();
             } closeRowClassModal(); showToast("Tersimpan.");
+        }
+
+        function updateClassFilterOptions() {
+            const sel = document.getElementById('schedule-class-filter');
+            const currentVal = sel.value;
+            let h = '<option value="all">Semua Kelas (Jadwal Master)</option>';
+            classes.forEach(c => {
+                h += `<option value="${c.id}">Kelas: ${escapeHTML(c.name)}</option>`;
+            });
+            sel.innerHTML = h;
+            if (classes.some(c=>c.id===currentVal)) sel.value = currentVal;
+            else sel.value = 'all';
         }
 
         function renderScheduleTable() {
             const h=document.getElementById('schedule-header'), b=document.getElementById('schedule-body');
             if(!classes.length) { h.innerHTML='<th class="p-4 text-xs">Kosong</th>'; b.innerHTML=''; return; }
             
-            h.innerHTML=`<th class="w-8 sticky left-0 z-20 bg-slate-100"></th><th class="w-20 px-2 py-3 text-center sticky left-8 z-20 bg-slate-100">WAKTU</th><th class="w-16 px-2 py-3 text-center sticky left-28 z-20 bg-slate-100 border-r-2 border-slate-300">KE</th>` + classes.map(c=>`<th class="px-2 py-3 text-center min-w-[100px]"><div class="font-bold text-slate-700">${c.name}</div></th>`).join('');
+            const filterClassId = document.getElementById('schedule-class-filter').value;
+            const activeClasses = filterClassId === 'all' ? classes : classes.filter(c => c.id === filterClassId);
+
+            h.innerHTML=`<th class="col-hari sticky left-0 z-20 bg-slate-100">HARI</th><th class="col-waktu sticky left-16 z-20 bg-slate-100">WAKTU</th><th class="col-ke sticky left-44 z-20 bg-slate-100 border-r-2 border-slate-300">KE</th>` + activeClasses.map(c=>`<th class="col-kelas px-2 py-3 text-center"><div class="font-bold text-slate-700">${escapeHTML(c.name)}</div></th>`).join('');
 
             let bH=[];
+            let validDayCount = 0;
+
+            const moveSourceItem = mobileMoveSource ? schedule.find(x => x.id === mobileMoveSource.pId) : null;
+
             DEFAULT_DAYS.forEach((d) => {
                 const dr = rows.filter(r=>!r.days||r.days.includes(d)); if(!dr.length) return;
-                dr.forEach((r, i) => {
-                    bH.push('<tr>'); if(i===0) bH.push(`<td rowspan="${dr.length}" class="excel-day text-center sticky left-0 z-10 border-r">${d}</td>`);
+                
+                const isAltDay = validDayCount % 2 !== 0;
+                const baseBg = isAltDay ? 'bg-slate-50/70' : 'bg-white';
+                const stickyBg = isAltDay ? 'bg-slate-100' : 'bg-slate-50/90';
+                validDayCount++;
+
+                dr.forEach((r, idx) => {
+                    const isDayEnd = idx === dr.length - 1; 
+                    bH.push(`<tr class="${baseBg} ${isDayEnd ? 'day-end' : ''}">`); 
+                    let bTop = idx === 0 ? "border-t-2 border-t-indigo-600 " : "";
+                    
+                    if (idx === 0) {
+                        bH.push(`<td rowspan="${dr.length}" class="col-hari excel-day text-center sticky left-0 z-10 border-r-2 border-r-indigo-300 ${bTop} ${isAltDay ? 'bg-indigo-100 text-indigo-950':'bg-indigo-50 text-indigo-900'}">${d}</td>`);
+                    }
+                    
                     const all=!r.targetClasses||r.targetClasses.length===classes.length;
                     if(r.type==='break') {
-                        bH.push(`<td class="excel-time text-[10px] text-center sticky left-8 z-10">${r.time}</td>`);
-                        if(all) bH.push(`<td colspan="${classes.length+1}" class="excel-break text-center uppercase text-xs">${r.label}</td>`);
+                        bH.push(`<td class="col-waktu excel-time text-[10px] text-center sticky left-16 z-10 ${bTop} ${stickyBg}">${r.time}</td>`);
+                        if(all) bH.push(`<td colspan="${activeClasses.length+1}" class="excel-break text-center uppercase text-xs ${bTop} ${isAltDay?'bg-slate-200/50':'bg-slate-100'}">${escapeHTML(r.label)}</td>`);
                         else {
-                            bH.push(`<td class="text-center font-bold text-slate-700 bg-slate-50 sticky left-28 z-10 border-r-2">${r.label}</td>`);
-                            classes.forEach(c => bH.push((!r.targetClasses||r.targetClasses.includes(c.id)) ? `<td class="excel-break text-center uppercase text-[10px]">${r.label}</td>` : `<td class="bg-slate-200/50" style="background:repeating-linear-gradient(45deg,transparent,transparent 5px,rgba(0,0,0,0.03) 5px,rgba(0,0,0,0.03) 10px)"></td>`));
+                            bH.push(`<td class="col-ke text-center font-bold text-slate-700 sticky left-44 z-10 border-r-2 border-r-slate-300 ${bTop} ${stickyBg}">${escapeHTML(r.label)}</td>`);
+                            activeClasses.forEach(c => bH.push((!r.targetClasses||r.targetClasses.includes(c.id)) ? `<td class="excel-break text-center uppercase text-[10px] ${bTop} ${isAltDay?'bg-slate-200/50':'bg-slate-100'}">${escapeHTML(r.label)}</td>` : `<td class="bg-slate-200/50 ${bTop}" style="background:repeating-linear-gradient(45deg,transparent,transparent 5px,rgba(0,0,0,0.03) 5px,rgba(0,0,0,0.03) 10px)"></td>`));
                         }
                     } else {
-                        bH.push(`<td class="excel-time text-[10px] text-center sticky left-8 z-10">${r.time}</td><td class="text-center font-bold text-slate-700 bg-slate-50 sticky left-28 z-10 border-r-2">${r.label}</td>`);
-                        classes.forEach(c => {
+                        bH.push(`<td class="col-waktu excel-time text-[10px] text-center sticky left-16 z-10 ${bTop} ${stickyBg}">${r.time}</td><td class="col-ke text-center font-bold text-slate-700 sticky left-44 z-10 border-r-2 border-r-slate-300 ${bTop} ${stickyBg}">${escapeHTML(r.label)}</td>`);
+                        activeClasses.forEach(c => {
                             const on=!r.targetClasses||r.targetClasses.includes(c.id), p=schedMap[`${d}_${r.id}_${c.id}`];
-                            if(!on && !p) bH.push(`<td class="bg-slate-200/50 cursor-not-allowed" style="background:repeating-linear-gradient(45deg,transparent,transparent 5px,rgba(0,0,0,0.03) 5px,rgba(0,0,0,0.03) 10px)"></td>`);
-                            else if(!on && p) bH.push(`<td class="slot-filled bg-red-100 text-center" onclick="removePlotById('${p.id}')"><div class="text-[11px] font-bold text-red-700 line-through">${assignMap[p.assignId]?.subject||'Err'}</div><div class="text-[9px] text-red-500 font-bold">NONAKTIF</div></td>`);
+                            if(!on && !p) bH.push(`<td class="bg-slate-200/50 cursor-not-allowed ${bTop}" style="background:repeating-linear-gradient(45deg,transparent,transparent 5px,rgba(0,0,0,0.03) 5px,rgba(0,0,0,0.03) 10px)"></td>`);
+                            else if(!on && p) bH.push(`<td class="slot-filled bg-red-100 text-center ${bTop}" onclick="removePlotById('${p.id}')"><div class="text-[11px] font-bold text-red-700 line-through">${escapeHTML(assignMap[p.assignId]?.subject||'Err')}</div><div class="text-[9px] text-red-500 font-bold">NONAKTIF</div></td>`);
                             else if(p) {
                                 const a=assignMap[p.assignId]; if(a) {
-                                    const conf=teacherSlotMap[`${d}_${r.id}_${a.teacher}`]>1;
-                                    bH.push(`<td class="slot-filled ${conf?'bg-red-100':''} text-center relative p-1" draggable="true" ondragstart="handleDragStart(event,'${p.id}','${d}','${r.id}','${c.id}')" ondragover="handleDragOver(event)" ondrop="handleDrop(event,'${d}','${r.id}','${c.id}','${p.id}')" onclick="openPlotModal('${d}','${r.id}','${c.id}','${c.name}','${p.id}')"><div class="text-[11px] font-bold ${conf?'text-red-700 animate-pulse':'text-slate-800'} truncate pointer-events-none">${a.subject}</div><div class="text-[9px] text-slate-500 truncate pointer-events-none">${conf?'<i class="fa-solid fa-triangle-exclamation text-red-500 mr-1"></i>':''}${a.teacher}</div></td>`);
-                                } else bH.push(`<td class="slot-filled bg-red-50 text-red-400 text-[10px] text-center" onclick="removePlotById('${p.id}')">Invalid</td>`);
-                            } else bH.push(`<td class="slot-clickable p-2" ondragover="handleDragOver(event)" ondrop="handleDrop(event,'${d}','${r.id}','${c.id}',null)" onclick="openPlotModal('${d}','${r.id}','${c.id}','${c.name}',null)"></td>`);
+                                    const normTeacherName = normalizeString(a.teacher);
+                                    const conf=teacherSlotMap[`${d}_${r.id}_${normTeacherName}`]>1;
+                                    const isMoving = mobileMoveSource && mobileMoveSource.pId === p.id;
+                                    
+                                    let cellStyle = "";
+                                    let cellClass = "col-kelas slot-filled text-center relative p-1 " + bTop;
+                                    
+                                    if (conf) {
+                                        cellClass += " bg-red-100 border-red-500 text-red-900";
+                                    } else if (isMoving) {
+                                        cellClass += " slot-moving";
+                                    } else {
+                                        const col = getSubjectColor(a.subject);
+                                        cellStyle = `background-color: rgb(${col.bg.join(',')}) !important; border-left: 4px solid rgb(${col.text.join(',')}) !important; color: rgb(${col.text.join(',')});`;
+                                    }
+                                    
+                                    bH.push(`<td data-day="${d}" data-row="${r.id}" data-class="${c.id}" class="${cellClass}" style="${cellStyle}" draggable="true" ondragstart="handleDragStart(event,'${p.id}','${d}','${r.id}','${c.id}')" ondragover="handleDragOver(event)" ondrop="handleDrop(event,'${d}','${r.id}','${c.id}','${p.id}')" onclick="handleCellInteraction('${d}','${r.id}','${c.id}','${escapeHTML(c.name)}','${p.id}')"><div class="text-[11px] font-bold truncate pointer-events-none">${escapeHTML(a.subject)}</div><div class="text-[9.5px] font-medium truncate pointer-events-none">${conf?'<i class="fa-solid fa-triangle-exclamation text-red-500 mr-1"></i>':''}${escapeHTML(abbreviateTeacher(a.teacher))}</div></td>`);
+                                } else bH.push(`<td class="slot-filled bg-red-50 text-red-400 text-[10px] text-center ${bTop}" onclick="removePlotById('${p.id}')">Invalid</td>`);
+                            } else {
+                                const isEligibleTarget = moveSourceItem && moveSourceItem.classId === c.id;
+                                if (isEligibleTarget) {
+                                    bH.push(`<td data-day="${d}" data-row="${r.id}" data-class="${c.id}" class="col-kelas slot-clickable slot-eligible-target p-2 ${bTop}" ondragover="handleDragOver(event)" ondrop="handleDrop(event,'${d}','${r.id}','${c.id}',null)" onclick="handleCellInteraction('${d}','${r.id}','${c.id}','${escapeHTML(c.name)}',null)">
+                                        <div class="text-[9px] text-purple-700 font-bold animate-pulse text-center"><i class="fa-solid fa-circle-arrow-down mr-1"></i>Pindahkan</div>
+                                    </td>`);
+                                } else {
+                                    bH.push(`<td data-day="${d}" data-row="${r.id}" data-class="${c.id}" class="col-kelas slot-clickable p-2 ${bTop} ${isAltDay?'hover:bg-indigo-50':''}" ondragover="handleDragOver(event)" ondrop="handleDrop(event,'${d}','${r.id}','${c.id}',null)" onclick="handleCellInteraction('${d}','${r.id}','${c.id}','${escapeHTML(c.name)}',null)"></td>`);
+                                }
+                            }
                         });
                     } bH.push('</tr>');
                 });
             }); b.innerHTML=bH.join('');
+        }
+
+        function handleCellInteraction(d, r, c, cn, eId) {
+            if (mobileMoveSource) {
+                const s = schedule.find(x => x.id === mobileMoveSource.pId);
+                if (s) {
+                    const targetRow = rows.find(x => x.id === r);
+                    if (targetRow?.targetClasses && !targetRow.targetClasses.includes(c)) {
+                        showToast("Jam target nonaktif untuk kelas ini!", true);
+                        cancelMoveMode();
+                        return;
+                    }
+                    if (s.classId !== c) {
+                        showToast("Pindah jadwal hanya bisa dilakukan pada kelas yang sama (kolom yang sama)!", true);
+                        cancelMoveMode();
+                        return;
+                    }
+                    saveToHistory();
+                    const sa = assignMap[s.assignId];
+                    if (sa && teacherBlocks[normalizeString(sa.teacher)]?.includes(d)) {
+                        showToast(`${sa.teacher} diblock pada hari ${d}!`, true);
+                        cancelMoveMode();
+                        return;
+                    }
+                    s.day = d;
+                    s.rowId = r;
+                    saveData();
+                    rebuildMaps();
+                    renderScheduleTable();
+                    showToast("Jadwal dipindahkan.");
+                }
+                cancelMoveMode();
+            } else {
+                if (eId) {
+                    mobileMoveSource = { pId: eId, d, r, c };
+                    const banner = document.getElementById('move-mode-banner');
+                    if (banner) banner.classList.remove('hidden');
+                    renderScheduleTable();
+                    showToast("Mode Pindah Aktif! Ketuk salah satu sel kosong berlabel 'Pindahkan'.");
+                } else {
+                    openPlotModal(d, r, c, cn, eId);
+                }
+            }
+        }
+
+        function cancelMoveMode() {
+            mobileMoveSource = null;
+            const banner = document.getElementById('move-mode-banner');
+            if (banner) banner.classList.add('hidden');
+            renderScheduleTable();
         }
 
         function openPlotModal(d, r, c, cn, eId) {
@@ -440,21 +934,108 @@
             document.getElementById('plotModal').classList.remove('hidden'); setTimeout(()=>document.getElementById('pm-search').focus(), 100);
         }
         function closePlotModal() { document.getElementById('plotModal').classList.add('hidden'); }
+
         function filterPlotList() {
             const v=document.getElementById('pm-search').value.toLowerCase(), d=currentModalData;
+            
             document.getElementById('pm-list').innerHTML=assignments.filter(a=>a.classId===d.classId&&(a.teacher.toLowerCase().includes(v)||a.subject.toLowerCase().includes(v))).map(a=>{
                 const p=schedule.filter(s=>s.assignId===a.id).length;
-                return `<div onclick="commitPlot('${a.id}')" class="p-3 bg-slate-50 hover:bg-indigo-50 rounded-lg border cursor-pointer flex justify-between items-center"><div class="truncate pr-2"><div class="text-xs font-bold text-slate-800">${a.subject}</div><div class="text-[10px] text-slate-500">${a.teacher}</div></div><div class="text-xs font-bold ${p>=a.jp?'text-red-500':'text-green-600'}">${p}/${a.jp} JP</div></div>`;
+                const teacherNorm = normalizeString(a.teacher);
+                
+                let bentrokClass = null;
+                schedule.forEach(s => {
+                    if (s.id !== d.existingPlotId && s.day === d.day && s.rowId === d.rowId && s.classId !== d.classId) {
+                        const targetAsg = assignMap[s.assignId];
+                        if (targetAsg && normalizeString(targetAsg.teacher) === teacherNorm) {
+                            const targetClassObj = classes.find(cx => cx.id === s.classId);
+                            bentrokClass = targetClassObj ? targetClassObj.name : 'Kelas Lain';
+                        }
+                    }
+                });
+
+                const isBlocked = teacherBlocks[teacherNorm]?.includes(d.day);
+                const isLimitReached = p >= a.jp;
+
+                if (bentrokClass) {
+                    return `<div class="p-3 bg-red-50 border-red-200 rounded-lg border flex justify-between items-center opacity-60 cursor-not-allowed">
+                        <div class="truncate pr-2">
+                            <div class="text-xs font-bold text-red-900">${escapeHTML(a.subject)}</div>
+                            <div class="text-[10px] text-red-700 font-semibold"><i class="fa-solid fa-circle-exclamation mr-1"></i>${escapeHTML(abbreviateTeacher(a.teacher))}</div>
+                            <div class="text-[9px] text-rose-600 font-extrabold mt-0.5">⚠️ BENTROK DI ${bentrokClass.toUpperCase()}</div>
+                        </div>
+                        <div class="text-xs font-bold text-red-500">${p}/${a.jp} JP</div>
+                    </div>`;
+                } else if (isBlocked) {
+                    return `<div class="p-3 bg-amber-50 border-amber-200 rounded-lg border flex justify-between items-center opacity-60 cursor-not-allowed">
+                        <div class="truncate pr-2">
+                            <div class="text-xs font-bold text-amber-900">${escapeHTML(a.subject)}</div>
+                            <div class="text-[10px] text-amber-700 font-semibold"><i class="fa-solid fa-ban mr-1"></i>${escapeHTML(abbreviateTeacher(a.teacher))}</div>
+                            <div class="text-[9px] text-amber-600 font-extrabold mt-0.5">🚫 BLOCKED DAY HARI ${d.day.toUpperCase()}</div>
+                        </div>
+                        <div class="text-xs font-bold text-amber-500">${p}/${a.jp} JP</div>
+                    </div>`;
+                } else if (isLimitReached) {
+                    return `<div class="p-3 bg-orange-50 border-orange-200 rounded-lg border flex justify-between items-center opacity-60 cursor-not-allowed">
+                        <div class="truncate pr-2">
+                            <div class="text-xs font-bold text-orange-900">${escapeHTML(a.subject)}</div>
+                            <div class="text-[10px] text-orange-700 font-semibold"><i class="fa-solid fa-check-double mr-1"></i>${escapeHTML(abbreviateTeacher(a.teacher))}</div>
+                            <div class="text-[9px] text-orange-600 font-extrabold mt-0.5">🚫 KUOTA JP HABIS (${p}/${a.jp} JP)</div>
+                        </div>
+                        <div class="text-xs font-bold text-orange-500">${p}/${a.jp} JP</div>
+                    </div>`;
+                } else {
+                    return `<div onclick="commitPlot('${a.id}')" class="p-3 bg-slate-50 hover:bg-indigo-50 rounded-lg border cursor-pointer flex justify-between items-center">
+                        <div class="truncate pr-2">
+                            <div class="text-xs font-bold text-slate-800">${escapeHTML(a.subject)}</div>
+                            <div class="text-[10px] text-slate-500">${escapeHTML(abbreviateTeacher(a.teacher))}</div>
+                        </div>
+                        <div class="text-xs font-bold text-green-600">${p}/${a.jp} JP</div>
+                    </div>`;
+                }
             }).join('')||'<div class="text-center text-xs text-slate-400 py-4">Tidak ada beban.</div>';
         }
+
         function commitPlot(aId) {
-            const {day, rowId, classId, existingPlotId:e} = currentModalData, a=assignMap[aId]||assignments.find(x=>x.id===aId);
-            if(a&&teacherBlocks[a.teacher]?.includes(day)) return showToast(`${a.teacher} diblock hari ${day}!`,true);
-            if(e) schedule.find(s=>s.id===e).assignId=aId; else schedule.push({id:'sch_'+Date.now(), day, rowId, classId, assignId:aId});
+            const {day, rowId, classId, existingPlotId:e} = currentModalData;
+            const a = assignMap[aId] || assignments.find(x=>x.id===aId);
+            if (!a) return;
+            
+            const teacherNorm = normalizeString(a.teacher);
+
+            if(teacherBlocks[teacherNorm]?.includes(day)) {
+                return showToast(`${a.teacher} diblock hari ${day}!`, true);
+            }
+
+            const currentPlots = schedule.filter(s => s.assignId === a.id).length;
+            if (currentPlots >= a.jp) {
+                return showToast(`Gagal! Target mengajar untuk ${a.subject} sudah terpenuhi (${a.jp} JP).`, true);
+            }
+
+            let bentrokClass = null;
+            schedule.forEach(s => {
+                if (s.id !== e && s.day === day && s.rowId === rowId && s.classId !== classId) {
+                    const targetAsg = assignMap[s.assignId];
+                    if (targetAsg && normalizeString(targetAsg.teacher) === teacherNorm) {
+                        const targetClassObj = classes.find(cx => cx.id === s.classId);
+                        bentrokClass = targetClassObj ? targetClassObj.name : 'Kelas Lain';
+                    }
+                }
+            });
+            if (bentrokClass) {
+                return showToast(`Gagal Plot! ${a.teacher} sudah memiliki jadwal di kelas ${bentrokClass} pada jam ini.`, true);
+            }
+
+            saveToHistory();
+            if(e) {
+                const trg = schedule.find(s=>s.id===e);
+                if (trg) trg.assignId=aId;
+            } else {
+                schedule.push({id:'sch_'+Date.now(), day, rowId, classId, assignId:aId});
+            }
             saveData(); rebuildMaps(); renderScheduleTable(); closePlotModal(); showToast("Tersimpan.");
         }
         function removePlot() { if(currentModalData.existingPlotId) removePlotById(currentModalData.existingPlotId); closePlotModal(); }
-        function removePlotById(id) { schedule=schedule.filter(s=>s.id!==id); saveData(); rebuildMaps(); renderScheduleTable(); showToast("Dikosongkan."); }
+        function removePlotById(id) { saveToHistory(); schedule=schedule.filter(s=>s.id!==id); saveData(); rebuildMaps(); renderScheduleTable(); showToast("Dikosongkan."); }
 
         function handleDragStart(e, pId, d, r, c) { draggedPlot={pId, d, r, c}; e.dataTransfer.effectAllowed="move"; }
         function handleDragOver(e) { e.preventDefault(); e.dataTransfer.dropEffect="move"; }
@@ -464,161 +1045,391 @@
             if(tP) {
                 if(s.classId===tC) {
                     const t=schedule.find(x=>x.id===tP), sa=assignMap[s.assignId], ta=assignMap[t.assignId];
-                    if(sa&&teacherBlocks[sa.teacher]?.includes(tD)) return showToast(`${sa.teacher} diblock hari ${tD}!`,true);
-                    if(ta&&teacherBlocks[ta.teacher]?.includes(s.day)) return showToast(`${ta.teacher} diblock hari ${s.day}!`,true);
+                    if(sa&&teacherBlocks[normalizeString(sa.teacher)]?.includes(tD)) return showToast(`${sa.teacher} diblock hari ${tD}!`,true);
+                    if(ta&&teacherBlocks[normalizeString(ta.teacher)]?.includes(s.day)) return showToast(`${ta.teacher} diblock hari ${s.day}!`,true);
+                    saveToHistory();
                     let x=s.assignId; s.assignId=t.assignId; t.assignId=x;
-                } else showToast("Swap harus 1 kelas",true);
+                } else showToast("Pindah jadwal hanya bisa dilakukan pada kelas yang sama!",true);
             } else {
                 if(s.classId===tC) {
-                    const sa=assignMap[s.assignId]; if(sa&&teacherBlocks[sa.teacher]?.includes(tD)) return showToast(`${sa.teacher} diblock hari ${tD}!`,true);
+                    const sa=assignMap[s.assignId]; if(sa&&teacherBlocks[normalizeString(sa.teacher)]?.includes(tD)) return showToast(`${sa.teacher} diblock hari ${tD}!`,true);
+                    saveToHistory();
                     s.day=tD; s.rowId=tR;
-                } else showToast("Geser harus 1 kelas",true);
+                } else showToast("Pindah jadwal hanya bisa dilakukan pada kelas yang sama!",true);
             }
             draggedPlot=null; saveData(); rebuildMaps(); renderScheduleTable();
         }
 
         function autoGenerateSchedule() {
-            if(!assignments.length) return showToast("Input beban dulu!",true); let s=0, f=0;
-            [...assignments].sort(()=>Math.random()-0.5).forEach(a => {
-                let cur=schedule.filter(x=>x.assignId===a.id), rem=a.jp-cur.length; if(rem<=0) return;
-                let chk=[]; while(rem>0){rem>=2?chk.push(2):chk.push(1); rem-=chk[chk.length-1];}
-                let ud=cur.map(x=>x.day);
-                chk.forEach(cs=>{
-                    let plc=false, cands=[];
-                    DEFAULT_DAYS.forEach(d=>{
-                        if(teacherBlocks[a.teacher]?.includes(d) || (ud.includes(d)&&a.jp>=3)) return;
-                        let kr=rows.filter(r=>r.type==='kbm'&&(!r.days||r.days.includes(d))&&(!r.targetClasses||r.targetClasses.includes(a.classId)));
-                        for(let i=0;i<=kr.length-cs;i++){
-                            let v=true, sl=[];
-                            for(let j=0;j<cs;j++){ let r=kr[i+j]; if(schedule.some(x=>x.day===d&&x.rowId===r.id&&(x.classId===a.classId||assignMap[x.assignId]?.teacher===a.teacher))) {v=false;break;} sl.push(r.id); }
-                            if(v) cands.push({d,rs:sl});
+            if(!assignments.length) return showToast("Input beban dulu!",true); 
+            saveToHistory();
+            let s=0, f=0;
+            let failedList = [];
+
+            // Mengacak beban mengajar agar urutan pembagian bervariasi setiap kali dijalankan
+            const shuffledAssignments = [...assignments].sort(() => Math.random() - 0.5);
+
+            shuffledAssignments.forEach(a => {
+                let cur = schedule.filter(x => x.assignId === a.id);
+                let rem = a.jp - cur.length;
+                if (rem <= 0) return;
+
+                // Membagi sisa JP menjadi blok-blok akademis yang kokoh (Anti-Eceran)
+                let chk = [];
+                if (rem === 1) {
+                    chk = [1];
+                } else if (rem === 2) {
+                    chk = [2]; // Wajib 2 JP berdampingan
+                } else if (rem === 3) {
+                    chk = [2, 1]; // Wajib 2 JP berdampingan + 1 JP di hari lain
+                } else if (rem === 4) {
+                    chk = Math.random() > 0.5 ? [2, 2] : [3, 1]; // Formasi 2+2 atau 3+1 di hari berbeda
+                } else {
+                    let temp = rem;
+                    while (temp > 0) {
+                        if (temp >= 4) {
+                            chk.push(2); chk.push(2); // Pecah muatan besar menjadi kelipatan 2 JP
+                            temp -= 4;
+                        } else if (temp === 3) {
+                            chk.push(2); chk.push(1);
+                            temp -= 3;
+                        } else if (temp === 2) {
+                            chk.push(2);
+                            temp -= 2;
+                        } else {
+                            chk.push(1);
+                            temp -= 1;
+                        }
+                    }
+                }
+
+                let ud = cur.map(x => x.day);
+                const teacherNorm = normalizeString(a.teacher);
+
+                chk.forEach(cs => {
+                    let plc = false;
+                    let cands = [];
+
+                    DEFAULT_DAYS.forEach(d => {
+                        // Lewati jika hari diblokir untuk guru ini
+                        if (teacherBlocks[teacherNorm]?.includes(d)) return;
+                        
+                        // Batasi penumpukan: Blok >= 2 JP wajib diletakkan di hari berbeda (anti-tumpuk)
+                        if (ud.includes(d) && cs >= 2) return;
+
+                        let kr = rows.filter(r => r.type === 'kbm' && (!r.days || r.days.includes(d)) && (!r.targetClasses || r.targetClasses.includes(a.classId)));
+                        
+                        for (let i = 0; i <= kr.length - cs; i++) {
+                            let v = true;
+                            let sl = [];
+                            for (let j = 0; j < cs; j++) {
+                                let r = kr[i + j];
+                                // Validasi bentrok kelas dan bentrok jam guru di kelas lain
+                                let conflict = schedule.some(x => x.day === d && x.rowId === r.id && (x.classId === a.classId || assignMap[x.assignId]?.teacher === a.teacher));
+                                if (conflict) {
+                                    v = false;
+                                    break;
+                                }
+                                sl.push(r.id);
+                            }
+                            if (v) {
+                                cands.push({ d, rs: sl });
+                            }
                         }
                     });
-                    if(cands.length){ let c=cands[Math.floor(Math.random()*cands.length)]; c.rs.forEach(rid=>schedule.push({id:'sa_'+Date.now()+Math.random(),day:c.d,rowId:rid,classId:a.classId,assignId:a.id})); ud.push(c.d); s+=cs; plc=true; }
-                    if(!plc&&cs>1){ for(let i=0;i<cs;i++){ let sc=[]; DEFAULT_DAYS.forEach(d=>{ if(!teacherBlocks[a.teacher]?.includes(d)){ rows.filter(r=>r.type==='kbm'&&(!r.days||r.days.includes(d))&&(!r.targetClasses||r.targetClasses.includes(a.classId))).forEach(r=>{ if(!schedule.some(x=>x.day===d&&x.rowId===r.id&&(x.classId===a.classId||assignMap[x.assignId]?.teacher===a.teacher))) sc.push({d,r:r.id}); }); } }); if(sc.length){ let p=sc[Math.floor(Math.random()*sc.length)]; schedule.push({id:'sf_'+Date.now()+Math.random(),day:p.d,rowId:p.r,classId:a.classId,assignId:a.id}); ud.push(p.d); s++;} else f++; } } else if(!plc) f++;
-                });
-            }); saveData(); rebuildMaps(); renderScheduleTable(); showToast(`Auto Selesai. ${s} Sukses${f?', '+f+' Gagal':''}`);
-        }
 
-        function exportScheduleToExcel() {
-            if(!classes.length||!schedule.length) return showToast("Data Kosong",true);
-            const wD=[["JADWAL EDU-SCHED"],[],["HARI","WAKTU","JAM KE-",...classes.map(c=>c.name)]];
-            DEFAULT_DAYS.forEach(d => {
-                let fr=true; rows.filter(r=>!r.days||r.days.includes(d)).forEach(r => {
-                    let row=[fr?d:"", r.time, r.label]; fr=false;
-                    if(r.type==='break') classes.forEach(c=>row.push((!r.targetClasses||r.targetClasses.includes(c.id))?r.label.toUpperCase():"-"));
-                    else classes.forEach(c=>{ if(r.targetClasses&&!r.targetClasses.includes(c.id)) row.push("-"); else { const p=schedule.find(x=>x.day===d&&x.rowId===r.id&&x.classId===c.id), a=p?assignMap[p.assignId]:null; row.push(a?`${a.subject} (${a.teacher})`:"-"); } });
-                    wD.push(row);
-                });
-            });
-            const a=document.createElement('a'); a.href=URL.createObjectURL(new Blob([wD.map(r=>r.map(v=>`"${(v||'').replace(/"/g,'""')}"`).join(',')).join('\n')], {type:'text/csv;charset=utf-8;'})); a.download="Jadwal.csv"; a.click(); showToast("Diekspor (CSV)");
-        }
+                    if (cands.length > 0) {
+                        // Eksekusi penempatan blok berurutan secara utuh
+                        let c = cands[Math.floor(Math.random() * cands.length)];
+                        c.rs.forEach(rid => {
+                            schedule.push({
+                                id: 'sa_' + Date.now() + Math.random(),
+                                day: c.d,
+                                rowId: rid,
+                                classId: a.classId,
+                                assignId: a.id
+                            });
+                        });
+                        ud.push(c.d);
+                        s += cs;
+                        plc = true;
+                    }
 
-        // FUNGSI BARU: Ekspor PNG Resolusi Tinggi (Tanpa Potong/Sticky Bug)
-        function exportScheduleToExcel() {
-            if(!classes.length||!schedule.length) return showToast("Data Kosong",true);
-            const wD=[["JADWAL EDU-SCHED"],[],["HARI","WAKTU","JAM KE-",...classes.map(c=>c.name)]];
-            DEFAULT_DAYS.forEach(d => {
-                let fr=true; rows.filter(r=>!r.days||r.days.includes(d)).forEach(r => {
-                    let row=[fr?d:"", r.time, r.label]; fr=false;
-                    if(r.type==='break') classes.forEach(c=>row.push((!r.targetClasses||r.targetClasses.includes(c.id))?r.label.toUpperCase():"-"));
-                    else classes.forEach(c=>{ if(r.targetClasses&&!r.targetClasses.includes(c.id)) row.push("-"); else { const p=schedule.find(x=>x.day===d&&x.rowId===r.id&&x.classId===c.id), a=p?assignMap[p.assignId]:null; row.push(a?`${a.subject} (${a.teacher})`:"-"); } });
-                    wD.push(row);
+                    if (!plc) {
+                        // JIKA GAGAL: Kami MENOLAK keras memecah blok ini!
+                        // Blok langsung dilarikan ke log kegagalan agar KBM tetap terjaga kualitasnya.
+                        f += cs;
+                        failedList.push({ teacher: a.teacher, subject: a.subject, classId: a.classId, jp: cs });
+                    }
                 });
             });
-            const a=document.createElement('a'); a.href=URL.createObjectURL(new Blob([wD.map(r=>r.map(v=>`"${(v||'').replace(/"/g,'""')}"`).join(',')).join('\n')], {type:'text/csv;charset=utf-8;'})); a.download="Jadwal.csv"; a.click(); showToast("Diekspor (CSV)");
-        }
 
-        async function exportScheduleToPNG() {
-            if(!classes.length || !schedule.length) return showToast("Jadwal masih kosong!", true);
-            const btn = document.getElementById('btn-export-png');
-            btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-1.5"></i>Proses...';
-            btn.disabled = true; // Kunci tombol agar tidak diklik berkali-kali
-            
-            try {
-                // 1. Ambil tabel asli
-                const originalTable = document.querySelector('.excel-table');
-                
-                // 2. CLONE (Gandakan) tabel. Ini kunci agar UI asli tidak rusak/error.
-                const clonedTable = originalTable.cloneNode(true);
-                
-                // 3. Buat container tersembunyi (off-screen)
-                const tempContainer = document.createElement('div');
-                tempContainer.style.position = 'absolute';
-                tempContainer.style.left = '-9999px';
-                tempContainer.style.top = '-9999px';
-                tempContainer.style.backgroundColor = '#ffffff';
-                tempContainer.style.padding = '24px'; // Beri jarak tepi gambar
-                tempContainer.style.width = 'max-content'; // Paksa melebar sesuai isi
-                
-                // 4. Hapus class sticky HANYA pada tabel kloningan
-                const stickyElements = clonedTable.querySelectorAll('.sticky');
-                stickyElements.forEach(el => {
-                    el.classList.remove('sticky', 'left-0', 'left-8', 'left-28', 'z-10', 'z-20');
-                    el.style.position = 'static'; // Paksa posisi elemen ke normal
-                });
-                
-                // 5. Masukkan ke dalam DOM body (wajib agar html2canvas bisa membacanya)
-                tempContainer.appendChild(clonedTable);
-                document.body.appendChild(tempContainer);
+            saveData();
+            rebuildMaps();
+            renderScheduleTable();
 
-                // 6. Proses render gambar HANYA dari tabel kloningan
-                const canvas = await html2canvas(tempContainer, { 
-                    scale: 1.5, // Keseimbangan kualitas dan performa memori
-                    useCORS: true,
-                    backgroundColor: '#ffffff'
-                });
-                
-                // 7. Bersih-bersih: Hapus langsung kloningan dari DOM agar memori lega
-                document.body.removeChild(tempContainer);
-
-                // 8. Eksekusi unduhan (Gunakan Blob agar aman untuk file gambar besar)
-                canvas.toBlob((blob) => {
-                    if (!blob) throw new Error("Blob gagal dibuat.");
-                    const url = URL.createObjectURL(blob);
-                    const a = document.createElement('a');
-                    a.style.display = 'none';
-                    a.href = url;
-                    a.download = `Jadwal_EduSched_${new Date().getTime()}.png`;
-                    document.body.appendChild(a);
-                    a.click();
-                    
-                    // Hapus URL object setelah didownload
-                    setTimeout(() => {
-                        document.body.removeChild(a);
-                        URL.revokeObjectURL(url);
-                    }, 100);
-                    showToast("Gambar PNG berhasil diunduh.");
-                }, 'image/png');
-
-            } catch(e) { 
-                console.error("PNG Export Error:", e);
-                showToast("Gagal memproses gambar.", true); 
-            } finally {
-                // Selalu kembalikan state tombol apa pun hasilnya
-                btn.innerHTML = '<i class="fa-solid fa-image mr-1.5"></i>Unduh PNG';
-                btn.disabled = false;
+            if (f > 0) {
+                const container = document.getElementById('log-list-container');
+                container.innerHTML = failedList.map(item => {
+                    const cls = classes.find(x => x.id === item.classId);
+                    return `<div class="p-3 bg-red-50 border border-red-200 rounded-lg flex justify-between items-center">
+                        <div>
+                            <div class="text-xs font-bold text-red-900">${escapeHTML(item.subject)} (${escapeHTML(cls ? cls.name : '?')})</div>
+                            <div class="text-[10px] text-red-600">${escapeHTML(item.teacher)}</div>
+                        </div>
+                        <span class="text-[10px] font-bold px-2 py-0.5 bg-red-200 text-red-800 rounded">Gagal Diplot (${item.jp} JP)</span>
+                    </div>`;
+                }).join('');
+                document.getElementById('logModal').classList.remove('hidden');
+                showToast(`Auto Selesai. ${s} Terpasang, ${f} Gagal.`, true);
+            } else {
+                showToast(`Auto Selesai. Seluruh ${s} jam sukses terpasang sempurna!`);
             }
+        }
+
+        function exportScheduleToExcel() {
+            if(!classes.length||!schedule.length) return showToast("Data Kosong",true);
+            const wD=[["JADWAL EDU-SCHED MASTER"],[],["HARI","WAKTU","JAM KE-",...classes.map(c=>c.name)]];
+            DEFAULT_DAYS.forEach(d => {
+                let fr=true; rows.filter(r=>!r.days||r.days.includes(d)).forEach(r => {
+                    let row=[fr?d:"", r.time, r.label]; fr=false;
+                    if(r.type==='break') classes.forEach(c=>row.push((!r.targetClasses||r.targetClasses.includes(c.id))?r.label.toUpperCase():"-"));
+                    else classes.forEach(c=>{ 
+                        if(r.targetClasses&&!r.targetClasses.includes(c.id)) row.push("-"); 
+                        else { 
+                            const p=schedule.find(x=>x.day===d&&x.rowId===r.id&&x.classId===c.id), a=p?assignMap[p.assignId]:null; 
+                            row.push(a?`${a.subject}`:"-"); 
+                        } 
+                    });
+                    wD.push(row);
+                });
+            });
+            const a=document.createElement('a'); a.href=URL.createObjectURL(new Blob([wD.map(r=>r.map(v=>`"${(v||'').replace(/"/g,'""')}"`).join(',')).join('\n')], {type:'text/csv;charset=utf-8;'})); a.download="Jadwal.csv"; a.click(); showToast("Diekspor ke Format CSV");
+        }
+
+        function hslToRgb(h, s, l) {
+            s /= 100;
+            l /= 100;
+            const k = n => (n + h / 30) % 12;
+            const a = s * Math.min(l, 1 - l);
+            const f = n => l - a * Math.max(-1, Math.min(k(n) - 3, Math.min(9 - k(n), 1)));
+            return [Math.round(255 * f(0)), Math.round(255 * f(8)), Math.round(255 * f(4))];
+        }
+
+        function getSubjectColor(subjName) {
+            const s = (subjName || "").toUpperCase().trim();
+            if (s.includes("MATEMATIKA")) return { bg: [224, 242, 254], text: [3, 105, 161] }; 
+            if (s.includes("IPA")) return { bg: [220, 252, 231], text: [21, 128, 61] }; 
+            if (s.includes("BAHASA")) return { bg: [240, 253, 250], text: [15, 118, 110] }; 
+            if (s.includes("FIQIH") || s.includes("AKIDAH") || s.includes("AKHLAQ") || s.includes("SIROH") || s.includes("AKHLAK")) return { bg: [243, 232, 255], text: [107, 33, 168] }; 
+            if (s.includes("IMLA") || s.includes("NAHWU") || s.includes("SHOROF") || s.includes("SHARAF")) return { bg: [254, 226, 226], text: [185, 28, 28] }; 
+            if (s.includes("GIAT") || s.includes("APEL") || s.includes("PRA-KBM") || s.includes("GIAT JUMAT")) return { bg: [238, 242, 255], text: [67, 56, 202] }; 
+            if (s.includes("ISTIRAHAT") || s.includes("SHALAT") || s.includes("BREAK")) return { bg: [241, 245, 249], text: [71, 85, 105] }; 
+            
+            let hash = 0;
+            for (let i = 0; i < s.length; i++) {
+                hash = s.charCodeAt(i) + ((hash << 5) - hash);
+            }
+            const h = Math.abs(hash) % 360;
+            return { bg: hslToRgb(h, 60, 93), text: hslToRgb(h, 80, 25) };
+        }
+
+        function exportScheduleToPDF() {
+            if (!classes.length || !schedule.length) return showToast("Data jadwal kosong!", true);
+            
+            rebuildMaps();
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+            
+            const filterClassId = document.getElementById('schedule-class-filter').value;
+            const activeClasses = filterClassId === 'all' ? classes : classes.filter(c => c.id === filterClassId);
+
+            doc.setFont("Helvetica", "bold"); doc.setFontSize(13); doc.setTextColor(15, 23, 42); 
+            const titleText = filterClassId === 'all' ? "JADWAL PELAJARAN MASTER" : `JADWAL PELAJARAN KELAS: ${classes.find(c=>c.id===filterClassId)?.name}`;
+            doc.text(titleText, 105, 12, { align: 'center' });
+            
+            doc.setFont("Helvetica", "normal"); doc.setFontSize(8); doc.setTextColor(100, 116, 139); 
+            const dateStr = new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' });
+            doc.text(`Dibuat otomatis via EduSched Pro | Tanggal: ${dateStr}`, 105, 17, { align: 'center' });
+            
+            let totalTableRows = 0;
+            DEFAULT_DAYS.forEach(d => { totalTableRows += rows.filter(r => !r.days || r.days.includes(d)).length; });
+            
+            let fontSize = 7.5, cellPadding = 1.2;
+            if (totalTableRows > 35) { fontSize = 6.8; cellPadding = 0.8; }
+            if (totalTableRows > 45) { fontSize = 5.8; cellPadding = 0.5; }
+            if (totalTableRows > 55) { fontSize = 4.8; cellPadding = 0.3; }
+            
+            const columnStyles = {
+                0: { cellWidth: 12, halign: 'center', valign: 'middle' }, 
+                1: { cellWidth: 26, halign: 'center', valign: 'middle' }, 
+                2: { cellWidth: 8, halign: 'center', valign: 'middle' }   
+            };
+            const remainingWidth = 144; 
+            const classColWidth = remainingWidth / activeClasses.length;
+            activeClasses.forEach((c, i) => { columnStyles[3 + i] = { cellWidth: classColWidth, halign: 'center', valign: 'middle' }; });
+            
+            doc.autoTable({
+                html: '#schedule-table-id',
+                startY: 21,
+                theme: 'grid',
+                styles: {
+                    fontSize: fontSize,
+                    cellPadding: cellPadding,
+                    lineColor: [186, 200, 218], 
+                    lineWidth: 0.12,
+                    textColor: [15, 23, 42],
+                    minCellHeight: 0, 
+                    rowPageBreak: 'avoid',
+                    halign: 'center',
+                    valign: 'middle'
+                },
+                headStyles: { fillColor: [241, 245, 249], textColor: [15, 23, 42], fontStyle: 'bold', halign: 'center', valign: 'middle' },
+                columnStyles: columnStyles,
+                margin: { left: 10, right: 10, bottom: 8 },
+                tableWidth: 190,
+                didParseCell: function (data) {
+                    const cellEl = data.cell.raw;
+                    if (cellEl && data.row.section === 'body') {
+                        if (data.column.index === 0) {
+                            const dayText = (cellEl.innerText || '').trim().toUpperCase();
+                            const dayIdx = DEFAULT_DAYS.indexOf(dayText);
+                            if (dayIdx !== -1) {
+                                const isAlt = dayIdx % 2 !== 0;
+                                data.cell.styles.fillColor = isAlt ? [79, 70, 229] : [67, 56, 202]; // Alternating solid Indigo
+                                data.cell.styles.textColor = [255, 255, 255];
+                                data.cell.styles.fontStyle = 'bold';
+                            }
+                        }
+                        const isBreakCell = cellEl.classList?.contains('excel-break') || cellEl.className?.includes('excel-break');
+                        const isApelCell = cellEl.classList?.contains('apel-cell') || cellEl.className?.includes('apel-cell');
+                        
+                        if (isBreakCell || isApelCell) {
+                            // Agenda Bersama disetel solid Steel-Blue [71, 85, 105] dengan teks putih tebal (Bold)
+                            data.cell.styles.fillColor = [71, 85, 105]; 
+                            data.cell.styles.textColor = [255, 255, 255]; 
+                            data.cell.styles.fontStyle = 'bold';
+                            data.cell.text = [cellEl.innerText.trim().toUpperCase()];
+                        } else if (data.column.index >= 3) {
+                            const day = cellEl.getAttribute('data-day');
+                            const rowId = cellEl.getAttribute('data-row');
+                            const classId = cellEl.getAttribute('data-class');
+                            
+                            if (day && rowId && classId) {
+                                const p = schedMap[`${day}_${rowId}_${classId}`];
+                                if (p) {
+                                    const a = assignMap[p.assignId];
+                                    if (a) {
+                                        const col = getSubjectColor(a.subject);
+                                        data.cell.styles.fillColor = col.bg;
+                                        data.cell.styles.textColor = col.text;
+                                        data.cell.text = [a.subject.toUpperCase()];
+                                        data.cell.styles.fontStyle = 'normal'; // Mapel Normal (Tanpa Bold)
+                                    } else {
+                                        data.cell.text = ["-"];
+                                        data.cell.styles.fillColor = [249, 250, 251];
+                                        data.cell.styles.textColor = [156, 163, 175];
+                                    }
+                                } else {
+                                    data.cell.text = ["-"];
+                                    data.cell.styles.fillColor = [249, 250, 251];
+                                    data.cell.styles.textColor = [156, 163, 175];
+                                }
+                            }
+                        }
+                    }
+                },
+                didDrawCell: function (data) {
+                    const isDayEnd = data.row.element && data.row.element.classList.contains('day-end');
+                    if (isDayEnd) {
+                        doc.setDrawColor(15, 23, 42); // Slate-900 tebal pekat
+                        doc.setLineWidth(1.0);        // Pembatas hari tegas 1.0mm
+                        doc.line(data.cell.x, data.cell.y + data.cell.height, data.cell.x + data.cell.width, data.cell.y + data.cell.height);
+                    }
+                }
+            });
+            
+            doc.save(`Jadwal_Pelajaran_EduSched_${Date.now()}.pdf`);
+            showToast("PDF Berhasil Diunduh!");
         }
 
         function exportDataToJSON() {
             const a=document.createElement("a"); a.href=URL.createObjectURL(new Blob([JSON.stringify({classes,assignments,schedule,rows,startTime,teacherBlocks})], {type:"application/json"})); a.download=`Backup_${Date.now()}.json`; a.click(); showToast("Backup Diunduh");
         }
+        
         function importDataFromJSON(e) {
             const f=e.target.files[0]; if(!f) return; const r=new FileReader();
-            r.onload=(ev)=>{ try{ const d=JSON.parse(ev.target.result); if(d.classes&&d.assignments) {classes=d.classes;assignments=d.assignments;schedule=d.schedule||[];rows=d.rows||[];startTime=d.startTime||"07:00";teacherBlocks=d.teacherBlocks||{}; saveData(); refreshData(); recalculateAllTimes(); showToast("Dipulihkan"); e.target.value='';} else throw 1; }catch(err){showToast("Format Salah!",true);} }; r.readAsText(f);
+            r.onload=(ev)=>{ 
+                try{ 
+                    const d=JSON.parse(ev.target.result); 
+                    if(d.classes && Array.isArray(d.classes) && d.assignments && Array.isArray(d.assignments)) {
+                        saveToHistory();
+                        classes=d.classes;
+                        assignments=d.assignments;
+                        schedule=d.schedule||[];
+                        rows=d.rows||[];
+                        startTime=d.startTime||"07:00";
+                        teacherBlocks=d.teacherBlocks||{}; 
+                        saveData(); refreshData(); recalculateAllTimes(); showToast("Dipulihkan"); e.target.value='';
+                    } else {
+                        throw new Error("Skema database salah.");
+                    } 
+                }catch(err){
+                    showToast("File rusak atau format data tidak valid!",true);
+                } 
+            }; r.readAsText(f);
         }
-        function clearScheduleOnly() { showConfirm("Kosongkan Papan Jadwal? Data Guru & Beban aman.", () => { schedule=[]; saveData(); rebuildMaps(); if(!document.getElementById('content-schedule').classList.contains('hidden')) renderScheduleTable(); showToast("Jadwal Dikosongkan"); }); }
-        function hardResetData() { showConfirm("Hapus SEMUA data kelas, guru, beban, dan jadwal secara permanen?", () => { classes=[]; assignments=[]; schedule=[]; generateDefaultRows(); saveData(); refreshData(); showToast("Reset Selesai"); }); }
+        
+        function clearScheduleOnly() { showConfirm("Kosongkan Papan Jadwal? Data Guru & Beban aman.", () => { saveToHistory(); schedule=[]; saveData(); rebuildMaps(); if(!document.getElementById('content-schedule').classList.contains('hidden')) renderScheduleTable(); showToast("Jadwal Dikosongkan"); }); }
+        function hardResetData() { showConfirm("Hapus SEMUA data kelas, guru, beban, dan jadwal secara permanen?", () => { saveToHistory(); classes=[]; assignments=[]; schedule=[]; generateDefaultRows(); saveData(); refreshData(); showToast("Reset Selesai"); }); }
 
-        function saveGasUrl() { localStorage.setItem('eduPro_gas', document.getElementById('gas-url').value.trim()); showToast("URL Disimpan"); }
-        async function pushToCloud() {
-            const u=document.getElementById('gas-url').value.trim(), b=event.currentTarget; if(!u) return showToast("Masukkan URL!",true);
-            b.innerHTML='<i class="fa-solid fa-spinner fa-spin"></i>'; try{ await fetch(u, {method:'POST',body:JSON.stringify({classes,assignments,schedule,rows,startTime,teacherBlocks})}); showToast("Tersimpan di Cloud"); }catch(e){showToast("Gagal",true);} b.innerHTML='<i class="fa-solid fa-cloud-arrow-up mr-1"></i>Simpan';
+        function saveGasUrl() { 
+            const gasUrlValue = document.getElementById('gas-url').value.trim();
+            localStorage.setItem('eduPro_gas', gasUrlValue); 
+            showToast("URL Disimpan"); 
         }
-        async function pullFromCloud() {
+        
+        async function pushToCloud(event) {
             const u=document.getElementById('gas-url').value.trim(), b=event.currentTarget; if(!u) return showToast("Masukkan URL!",true);
-            b.innerHTML='<i class="fa-solid fa-spinner fa-spin"></i>'; try{ const d=await (await fetch(u)).json(); if(d.classes){classes=d.classes;assignments=d.assignments;schedule=d.schedule||[];rows=d.rows||[];startTime=d.startTime||"07:00";teacherBlocks=d.teacherBlocks||{}; saveData(); refreshData(); recalculateAllTimes(); showToast("Ditarik dari Cloud");} else showToast("Kosong",true); }catch(e){showToast("Gagal",true);} b.innerHTML='<i class="fa-solid fa-cloud-arrow-down mr-1"></i>Tarik';
+            b.innerHTML='<i class="fa-solid fa-spinner fa-spin"></i>'; 
+            try{ 
+                await fetch(u, {
+                    method:'POST',
+                    mode: 'no-cors', 
+                    body:JSON.stringify({classes,assignments,schedule,rows,startTime,teacherBlocks})
+                }); 
+                showToast("Berhasil Disimpan ke Cloud!"); 
+            }catch(e){
+                showToast(`Koneksi Gagal: Periksa internet atau URL Script Anda.`, true);
+                console.error(e);
+            } 
+            b.innerHTML='<i class="fa-solid fa-cloud-arrow-up mr-1"></i>Simpan';
+        }
+        
+        async function pullFromCloud(event) {
+            const u=document.getElementById('gas-url').value.trim(), b=event.currentTarget; if(!u) return showToast("Masukkan URL!",true);
+            b.innerHTML='<i class="fa-solid fa-spinner fa-spin"></i>'; 
+            try{ 
+                const res = await fetch(u);
+                const d = await res.json();
+                if(d && d.classes){
+                    saveToHistory();
+                    classes=d.classes;
+                    assignments=d.assignments;
+                    schedule=d.schedule||[];
+                    rows=d.rows||[];
+                    startTime=d.startTime||"07:00";
+                    teacherBlocks=d.teacherBlocks||{}; 
+                    saveData(); refreshData(); recalculateAllTimes(); 
+                    showToast("Data ditarik dari Cloud!");
+                } else {
+                    showToast("Tarik Gagal: Format cloud kosong.", true);
+                } 
+            }catch(e){
+                showToast(`Tarik Gagal: Hubungi Admin / Periksa deployment URL Anda.`, true);
+                console.error(e);
+            } 
+            b.innerHTML='<i class="fa-solid fa-cloud-arrow-down mr-1"></i>Tarik';
         }
     </script>
 </body>
