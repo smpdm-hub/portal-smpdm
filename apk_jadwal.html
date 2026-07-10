@@ -128,7 +128,10 @@
                                 <div class="w-1/3"><label class="block text-xs font-semibold text-slate-600 mb-1">Beban (JP)</label><input type="number" id="asg-jp" min="1" class="w-full border border-slate-300 rounded-lg p-2.5 text-sm outline-none focus:ring-2 focus:ring-indigo-500" placeholder="JP"></div>
                             </div>
 
-                            <button onclick="addAssignment()" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2.5 rounded-lg text-sm shadow-sm transition-colors mt-2"><i class="fa-solid fa-save mr-1.5"></i>Simpan Beban</button>
+                            <div class="flex space-x-2 mt-2">
+                                <button id="btn-save-asg" onclick="saveOrUpdateAssignment()" class="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2.5 rounded-lg text-sm shadow-sm transition-colors"><i class="fa-solid fa-save mr-1.5"></i>Simpan Beban</button>
+                                <button id="btn-cancel-edit-asg" onclick="cancelEditAssignment()" class="hidden bg-slate-100 hover:bg-slate-200 text-slate-600 font-bold py-2.5 px-3 rounded-lg text-sm shadow-sm transition-colors" title="Batal Edit"><i class="fa-solid fa-xmark"></i></button>
+                            </div>
                         </div>
                     </div>
                     
@@ -140,6 +143,30 @@
                             <button onclick="addClass()" class="bg-green-600 hover:bg-green-700 text-white px-3 rounded-lg text-sm font-bold transition-colors"><i class="fa-solid fa-plus"></i></button>
                         </div>
                         <div id="class-list-tags" class="mt-3 flex flex-wrap gap-1.5"></div>
+                    </div>
+                    
+                    <!-- Form Block Spot Guru -->
+                    <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-200">
+                        <div class="flex justify-between items-center mb-3">
+                            <h3 class="font-bold text-slate-800 text-sm"><i class="fa-solid fa-user-lock text-rose-500 mr-2"></i>Block Spot Guru</h3>
+                            <span class="bg-rose-100 text-rose-600 text-[10px] px-2 py-0.5 rounded font-bold" id="total-blocks">0 Guru</span>
+                        </div>
+                        <p class="text-[10px] text-slate-500 mb-3 leading-tight">Tentukan hari libur / larangan mengajar bagi guru tertentu.</p>
+                        <div class="space-y-3">
+                            <select id="block-teacher" class="w-full border border-slate-300 rounded-lg p-2.5 text-sm outline-none focus:ring-2 focus:ring-rose-500 bg-white" onchange="loadTeacherBlock()">
+                                <option value="">-- Pilih Guru --</option>
+                            </select>
+                            
+                            <div id="block-days-container" class="flex flex-wrap gap-1.5">
+                                <!-- Days injected via JS -->
+                            </div>
+                            
+                            <button onclick="saveTeacherBlock()" class="w-full bg-rose-50 hover:bg-rose-100 text-rose-700 font-bold py-2 rounded-lg text-sm transition-colors border border-rose-200 shadow-sm"><i class="fa-solid fa-save mr-1.5"></i>Simpan Aturan Block</button>
+                            
+                            <div id="active-blocks-container" class="mt-2 space-y-1.5 max-h-32 overflow-y-auto pt-2 border-t border-slate-100">
+                                <!-- Active blocks list -->
+                            </div>
+                        </div>
                     </div>
                 </div>
 
@@ -155,7 +182,7 @@
                     <div class="flex-1 overflow-y-auto p-0">
                         <table class="w-full text-sm text-left">
                             <thead class="bg-slate-100 text-slate-600 text-xs uppercase sticky top-0 z-10 shadow-sm">
-                                <tr><th class="px-4 py-3">Nama Guru</th><th class="px-4 py-3">Mapel</th><th class="px-4 py-3 text-center">Kelas</th><th class="px-4 py-3 text-center">Beban</th><th class="px-4 py-3 text-center w-16">Aksi</th></tr>
+                                <tr><th class="px-4 py-3">Nama Guru</th><th class="px-4 py-3">Mapel</th><th class="px-4 py-3 text-center">Kelas</th><th class="px-4 py-3 text-center">Beban</th><th class="px-4 py-3 text-center w-24">Aksi</th></tr>
                             </thead>
                             <tbody id="assignment-list" class="divide-y divide-slate-100"></tbody>
                         </table>
@@ -295,6 +322,7 @@
         let draggedPlot = null;
         let currentModalData = null;
         let currentRowForClassModal = null;
+        let editingAssignmentId = null;
 
         // Optimized Maps (O(1) lookups)
         let assignMap = {};
@@ -402,12 +430,14 @@
             try {
                 const c = localStorage.getItem('eduPro_classes'), a = localStorage.getItem('eduPro_assignments'), 
                       s = localStorage.getItem('eduPro_schedule'), r = localStorage.getItem('eduPro_rows'),
-                      st = localStorage.getItem('eduPro_startTime');
+                      st = localStorage.getItem('eduPro_startTime'),
+                      tb = localStorage.getItem('eduPro_teacherBlocks');
                 if(c) classes = JSON.parse(c);
                 if(a) assignments = JSON.parse(a);
                 if(s) schedule = JSON.parse(s);
                 if(r) rows = JSON.parse(r);
                 if(st) startTime = st;
+                if(tb) teacherBlocks = JSON.parse(tb);
                 
                 document.getElementById('gas-url').value = localStorage.getItem('eduPro_gas') || '';
             } catch(e) { console.error(e); }
@@ -419,6 +449,7 @@
             localStorage.setItem('eduPro_schedule', JSON.stringify(schedule));
             localStorage.setItem('eduPro_rows', JSON.stringify(rows));
             localStorage.setItem('eduPro_startTime', startTime);
+            localStorage.setItem('eduPro_teacherBlocks', JSON.stringify(teacherBlocks));
         }
 
         function refreshData() {
@@ -426,6 +457,7 @@
             renderClasses();
             renderAssignments();
             updateDatalist();
+            if(typeof renderBlockDays === 'function') renderBlockDays();
         }
 
         function rebuildMaps() {
@@ -464,14 +496,70 @@
             saveData(); refreshData(); showToast('Kelas dihapus');
         }
 
-        function addAssignment() {
-            const t = document.getElementById('asg-teacher').value.trim(), s = document.getElementById('asg-subject').value.trim();
-            const cId = document.getElementById('asg-class').value, jp = parseInt(document.getElementById('asg-jp').value);
+        function saveOrUpdateAssignment() {
+            const t = document.getElementById('asg-teacher').value.trim();
+            const s = document.getElementById('asg-subject').value.trim();
+            const cId = document.getElementById('asg-class').value;
+            const jp = parseInt(document.getElementById('asg-jp').value);
+            
             if(!t || !s || !cId || !jp) return showToast('Lengkapi form beban', true);
-            assignments.push({ id: 'a_'+Date.now(), teacher: t, subject: s, classId: cId, jp: jp });
-            document.getElementById('asg-subject').value=''; document.getElementById('asg-jp').value=''; document.getElementById('asg-teacher').focus();
-            saveData(); refreshData(); showToast('Beban disimpan');
+            
+            if (editingAssignmentId) {
+                const asgIndex = assignments.findIndex(a => a.id === editingAssignmentId);
+                if (asgIndex > -1) {
+                    assignments[asgIndex] = { ...assignments[asgIndex], teacher: t, subject: s, classId: cId, jp: jp };
+                    showToast('Beban diperbarui');
+                }
+                cancelEditAssignment();
+            } else {
+                assignments.push({ id: 'a_'+Date.now(), teacher: t, subject: s, classId: cId, jp: jp });
+                document.getElementById('asg-subject').value=''; document.getElementById('asg-jp').value=''; document.getElementById('asg-teacher').focus();
+                showToast('Beban disimpan');
+            }
+            saveData(); refreshData();
+            if(!document.getElementById('content-schedule').classList.contains('hidden')) renderScheduleTable();
         }
+
+        function editAssignment(id) {
+            const asg = assignments.find(a => a.id === id);
+            if (!asg) return;
+
+            editingAssignmentId = id;
+            
+            document.getElementById('asg-teacher').value = asg.teacher;
+            document.getElementById('asg-subject').value = asg.subject;
+            document.getElementById('asg-class').value = asg.classId;
+            document.getElementById('asg-jp').value = asg.jp;
+
+            const btnSave = document.getElementById('btn-save-asg');
+            btnSave.innerHTML = '<i class="fa-solid fa-check mr-1.5"></i>Update Beban';
+            btnSave.classList.remove('bg-indigo-600', 'hover:bg-indigo-700');
+            btnSave.classList.add('bg-amber-500', 'hover:bg-amber-600');
+            
+            const btnCancel = document.getElementById('btn-cancel-edit-asg');
+            btnCancel.classList.remove('hidden');
+            
+            document.getElementById('asg-teacher').focus();
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        function cancelEditAssignment() {
+            editingAssignmentId = null;
+            
+            document.getElementById('asg-teacher').value = '';
+            document.getElementById('asg-subject').value = '';
+            document.getElementById('asg-class').value = '';
+            document.getElementById('asg-jp').value = '';
+
+            const btnSave = document.getElementById('btn-save-asg');
+            btnSave.innerHTML = '<i class="fa-solid fa-save mr-1.5"></i>Simpan Beban';
+            btnSave.classList.add('bg-indigo-600', 'hover:bg-indigo-700');
+            btnSave.classList.remove('bg-amber-500', 'hover:bg-amber-600');
+            
+            const btnCancel = document.getElementById('btn-cancel-edit-asg');
+            btnCancel.classList.add('hidden');
+        }
+
         function removeAssignment(id) {
             assignments = assignments.filter(a => a.id !== id);
             schedule = schedule.filter(s => s.assignId !== id);
@@ -485,14 +573,111 @@
                 const c = classes.find(x => x.id === a.classId);
                 const pl = schedule.filter(s => s.assignId === a.id).length;
                 let bg = pl > a.jp ? 'bg-red-50' : (pl === a.jp ? 'bg-green-50' : '');
-                html += `<tr class="hover:bg-slate-50 ${bg}"><td class="px-4 py-2 font-semibold text-slate-800">${a.teacher}</td><td class="px-4 py-2 text-slate-600">${a.subject}</td><td class="px-4 py-2 text-center text-slate-600 font-bold">${c?c.name:'-'}</td><td class="px-4 py-2 text-center"><span class="px-2 py-0.5 rounded ${pl===a.jp?'bg-green-200 text-green-800':(pl>a.jp?'bg-red-200 text-red-800':'bg-slate-200 text-slate-700')} text-xs font-bold">${pl}/${a.jp}</span></td><td class="px-4 py-2 text-center"><button onclick="removeAssignment('${a.id}')" class="text-red-500 hover:text-red-700 p-1"><i class="fa-solid fa-trash"></i></button></td></tr>`;
+                html += `<tr class="hover:bg-slate-50 ${bg}">
+                    <td class="px-4 py-2 font-semibold text-slate-800">${a.teacher}</td>
+                    <td class="px-4 py-2 text-slate-600">${a.subject}</td>
+                    <td class="px-4 py-2 text-center text-slate-600 font-bold">${c?c.name:'-'}</td>
+                    <td class="px-4 py-2 text-center"><span class="px-2 py-0.5 rounded ${pl===a.jp?'bg-green-200 text-green-800':(pl>a.jp?'bg-red-200 text-red-800':'bg-slate-200 text-slate-700')} text-xs font-bold">${pl}/${a.jp}</span></td>
+                    <td class="px-4 py-2 text-center">
+                        <div class="flex justify-center items-center space-x-1.5">
+                            <button onclick="editAssignment('${a.id}')" class="text-amber-500 hover:text-amber-700 p-1.5 bg-amber-50 hover:bg-amber-100 rounded transition-colors" title="Edit Beban"><i class="fa-solid fa-pen text-[10px]"></i></button>
+                            <button onclick="removeAssignment('${a.id}')" class="text-red-500 hover:text-red-700 p-1.5 bg-red-50 hover:bg-red-100 rounded transition-colors" title="Hapus Beban"><i class="fa-solid fa-trash text-[10px]"></i></button>
+                        </div>
+                    </td>
+                </tr>`;
                 count++;
             });
             list.innerHTML = html; document.getElementById('total-asg-count').innerText = `${count} Data`;
         }
         function updateDatalist() {
             const dl = document.getElementById('teacher-list-data'); dl.innerHTML='';
-            const ts = [...new Set(assignments.map(a=>a.teacher))]; ts.forEach(t => dl.innerHTML+=`<option value="${t}">`);
+            const blockSel = document.getElementById('block-teacher');
+            let blockOptions = '<option value="">-- Pilih Guru --</option>';
+            
+            const ts = [...new Set(assignments.map(a=>a.teacher))].sort(); 
+            ts.forEach(t => {
+                dl.innerHTML+=`<option value="${t}">`;
+                blockOptions += `<option value="${t}">${t}</option>`;
+            });
+
+            if (blockSel) {
+                const currentVal = blockSel.value;
+                blockSel.innerHTML = blockOptions;
+                if (ts.includes(currentVal)) {
+                    blockSel.value = currentVal;
+                } else {
+                    blockSel.value = "";
+                    loadTeacherBlock();
+                }
+            }
+        }
+
+        // --- BLOCK SPOT GURU ---
+        function renderBlockDays() {
+            const container = document.getElementById('block-days-container');
+            if(!container) return;
+            container.innerHTML = DEFAULT_DAYS.map(d => `
+                <label class="flex items-center space-x-1.5 p-1.5 bg-slate-50 border border-slate-200 rounded cursor-pointer hover:bg-slate-100 flex-1 justify-center transition-colors">
+                    <input type="checkbox" value="${d}" class="block-day-cb w-3 h-3 rounded text-rose-500 focus:ring-rose-500">
+                    <span class="text-[11px] font-bold text-slate-600">${d}</span>
+                </label>
+            `).join('');
+            renderActiveBlocks();
+        }
+
+        function loadTeacherBlock() {
+            const t = document.getElementById('block-teacher').value.trim();
+            const cbs = document.querySelectorAll('.block-day-cb');
+            if (!t || !teacherBlocks[t]) {
+                cbs.forEach(cb => cb.checked = false);
+                return;
+            }
+            cbs.forEach(cb => cb.checked = teacherBlocks[t].includes(cb.value));
+        }
+
+        function saveTeacherBlock() {
+            const t = document.getElementById('block-teacher').value.trim();
+            if (!t) return showToast("Pilih nama guru terlebih dahulu", true);
+            
+            const blockedDays = Array.from(document.querySelectorAll('.block-day-cb:checked')).map(cb => cb.value);
+            
+            if (blockedDays.length === 0) {
+                delete teacherBlocks[t];
+                showToast(`Block spot untuk ${t} dihapus`);
+            } else {
+                teacherBlocks[t] = blockedDays;
+                showToast(`Block spot ${t} disimpan`);
+            }
+            
+            saveData(); renderActiveBlocks();
+            document.getElementById('block-teacher').value = '';
+            document.querySelectorAll('.block-day-cb').forEach(cb => cb.checked = false);
+        }
+
+        function renderActiveBlocks() {
+            const container = document.getElementById('active-blocks-container');
+            const totalSpan = document.getElementById('total-blocks');
+            if(!container) return;
+            let html = ''; const teachers = Object.keys(teacherBlocks);
+            
+            teachers.forEach(t => {
+                if (teacherBlocks[t] && teacherBlocks[t].length > 0) {
+                    html += `
+                    <div class="flex justify-between items-center bg-rose-50 border border-rose-100 p-2 rounded-lg">
+                        <div class="truncate pr-2">
+                            <div class="text-xs font-bold text-rose-800 truncate">${t}</div>
+                            <div class="text-[10px] text-rose-600 font-medium"><i class="fa-solid fa-ban mr-1"></i>${teacherBlocks[t].join(', ')}</div>
+                        </div>
+                        <button onclick="removeTeacherBlock('${t}')" class="text-rose-400 hover:text-rose-700 hover:bg-rose-100 p-1 rounded transition-colors shrink-0"><i class="fa-solid fa-trash text-xs"></i></button>
+                    </div>`;
+                }
+            });
+            container.innerHTML = html || '<div class="text-xs text-slate-400 text-center py-3 italic">Belum ada guru yang diblock</div>';
+            totalSpan.innerText = `${teachers.length} Guru`;
+        }
+
+        function removeTeacherBlock(t) {
+            delete teacherBlocks[t]; saveData(); renderActiveBlocks(); showToast(`Block spot ${t} dihapus`);
         }
 
         // --- ROW SETTINGS (TAB 3) ---
@@ -670,6 +855,13 @@
         }
         function commitPlot(aId) { 
             const { day, rowId, classId, existingPlotId: eId } = currentModalData; 
+            
+            // Validasi Block Spot Guru (Manual Plotting)
+            const asg = assignMap[aId] || assignments.find(a => a.id === aId);
+            if (asg && teacherBlocks[asg.teacher] && teacherBlocks[asg.teacher].includes(day)) {
+                return showToast(`GAGAL: ${asg.teacher} libur/block di hari ${day}!`, true);
+            }
+
             if(eId) schedule.find(s=>s.id===eId).assignId = aId; 
             else schedule.push({id:'sch_'+Date.now(), day, rowId, classId, assignId:aId}); 
             saveData(); rebuildMaps(); renderScheduleTable(); closePlotModal(); showToast("Tersimpan."); 
@@ -698,11 +890,24 @@
                 // Swap logic within same class ONLY
                 if(src.classId === trgClassId) {
                     const trg = schedule.find(s=>s.id===trgPlotId);
-                    if(trg) { let tA=src.assignId; src.assignId=trg.assignId; trg.assignId=tA; }
+                    if(trg) { 
+                        // Validasi Block Spot saat Drag & Drop (Swap)
+                        const srcAsg = assignMap[src.assignId]; const trgAsg = assignMap[trg.assignId];
+                        if (srcAsg && teacherBlocks[srcAsg.teacher] && teacherBlocks[srcAsg.teacher].includes(trgDay)) return showToast(`Gagal Swap: ${srcAsg.teacher} diblock di hari ${trgDay}!`, true);
+                        if (trgAsg && teacherBlocks[trgAsg.teacher] && teacherBlocks[trgAsg.teacher].includes(src.day)) return showToast(`Gagal Swap: ${trgAsg.teacher} diblock di hari ${src.day}!`, true);
+
+                        let tA=src.assignId; src.assignId=trg.assignId; trg.assignId=tA; 
+                    }
                 } else showToast("Hanya bisa swap di kelas yg sama", true);
             } else {
                 // Move empty
-                if(src.classId === trgClassId) { src.day=trgDay; src.rowId=trgRowId; }
+                if(src.classId === trgClassId) { 
+                    // Validasi Block Spot saat Drag & Drop (Geser)
+                    const srcAsg = assignMap[src.assignId];
+                    if (srcAsg && teacherBlocks[srcAsg.teacher] && teacherBlocks[srcAsg.teacher].includes(trgDay)) return showToast(`Gagal Geser: ${srcAsg.teacher} diblock di hari ${trgDay}!`, true);
+
+                    src.day=trgDay; src.rowId=trgRowId; 
+                }
                 else showToast("Geser harus di kolom kelas yang sama", true);
             }
             draggedPlot=null; saveData(); rebuildMaps(); renderScheduleTable();
@@ -799,7 +1004,7 @@
 
         // --- BACKUP, RESTORE & CLOUD SYNC ---
         function exportDataToJSON() {
-            const data = { classes, assignments, schedule, rows, startTime };
+            const data = { classes, assignments, schedule, rows, startTime, teacherBlocks };
             const blob = new Blob([JSON.stringify(data)], { type: "application/json" });
             const a = document.createElement("a");
             a.href = URL.createObjectURL(blob); a.download = `EduSched_Backup_${new Date().toISOString().split('T')[0]}.json`;
@@ -816,6 +1021,7 @@
                     if (data.classes && data.assignments) {
                         classes = data.classes; assignments = data.assignments; schedule = data.schedule || []; 
                         rows = data.rows || []; startTime = data.startTime || "07:00";
+                        teacherBlocks = data.teacherBlocks || {};
                         saveData(); refreshData(); recalculateAllTimes(false);
                         showToast("Data Berhasil Dipulihkan");
                         document.getElementById('import-file').value = ''; // Reset input
@@ -850,7 +1056,7 @@
             if(!url) return showToast("Masukkan URL GAS Dulu!", true);
             const btn = event.currentTarget; btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-1"></i>Menyimpan...';
             try {
-                const data = JSON.stringify({ classes, assignments, schedule, rows, startTime });
+                const data = JSON.stringify({ classes, assignments, schedule, rows, startTime, teacherBlocks });
                 await fetch(url, { method: 'POST', body: data });
                 showToast("Tersimpan di Cloud!");
             } catch(e) { showToast("Gagal (Cek Koneksi/URL)", true); console.error(e); }
@@ -866,6 +1072,7 @@
                 if(data.classes) {
                     classes = data.classes; assignments = data.assignments; schedule = data.schedule || []; 
                     rows = data.rows || []; startTime = data.startTime || "07:00";
+                    teacherBlocks = data.teacherBlocks || {};
                     saveData(); refreshData(); recalculateAllTimes(false);
                     showToast("Ditarik dari Cloud!");
                 } else showToast("Data Cloud Kosong", true);
