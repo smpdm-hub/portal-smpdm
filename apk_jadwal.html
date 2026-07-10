@@ -1,0 +1,723 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>EduSched Pro - Sistem Jadwal Ringan</title>
+    
+    <!-- Pustaka Inti -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    
+    <style>
+        body { font-family: 'Inter', sans-serif; background-color: #f8fafc; }
+        .excel-table { border-collapse: separate; border-spacing: 0; width: 100%; font-size: 12px; }
+        .excel-table th, .excel-table td { border-right: 1px solid #475569; border-bottom: 1px solid #475569; padding: 6px 8px; text-align: center; vertical-align: middle; }
+        .excel-table tr td:first-child, .excel-table tr th:first-child { border-left: 1px solid #475569; }
+        .excel-table thead th { position: sticky; top: 0; z-index: 20; box-shadow: 0 2px 2px -1px rgba(0, 0, 0, 0.4); border-top: 1px solid #475569; }
+        .excel-header { background-color: #92d050; font-weight: bold; color: #000; }
+        .excel-day { background-color: #92d050; font-weight: bold; writing-mode: vertical-rl; transform: rotate(180deg); letter-spacing: 2px; text-transform: uppercase; }
+        .excel-break { background-color: #ffff00; font-weight: bold; color: #000; }
+        .excel-time { background-color: #e2efda; font-weight: 600; white-space: nowrap; }
+        .slot-clickable { cursor: pointer; transition: all 0.2s; background-color: #ffffff; }
+        .slot-clickable:hover { background-color: #f1f5f9; box-shadow: inset 0 0 0 2px #3b82f6; }
+        .slot-filled { background-color: #ffffff; cursor: pointer; position: relative; }
+        .slot-filled:hover { background-color: #f8fafc; }
+        .tab-active { border-bottom: 3px solid #16a34a; color: #16a34a; font-weight: 700; }
+        .tab-inactive { color: #64748b; border-bottom: 3px solid transparent; }
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 6px; }
+        @media print {
+            body { background-color: #fff; } nav, .no-print { display: none !important; }
+            main { padding: 0 !important; margin: 0 !important; max-width: 100% !important; }
+            .print-card { border: none !important; box-shadow: none !important; }
+            .excel-day, th, td { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+            .excel-table thead th { position: static; box-shadow: none; }
+        }
+    </style>
+</head>
+<body class="text-slate-800 pb-24">
+
+    <nav class="bg-[#2e7d32] text-white shadow-md sticky top-0 z-40">
+        <div class="px-4 py-3 max-w-7xl mx-auto flex items-center justify-between">
+            <div class="flex items-center space-x-3">
+                <i class="fa-solid fa-table-list text-2xl"></i>
+                <div>
+                    <span class="font-bold text-lg block leading-none">EduSched Pro</span>
+                    <span class="text-[10px] text-green-200 block mt-1">Lightweight Version</span>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Toast Notification -->
+    <div id="toast" class="fixed top-20 left-1/2 transform -translate-x-1/2 bg-slate-800 text-white px-4 py-2.5 rounded-lg shadow-xl z-50 transition-all duration-300 opacity-0 pointer-events-none flex items-center text-sm font-medium border border-slate-700">
+        <i id="toastIcon" class="fa-solid fa-circle-check mr-2 text-green-400"></i>
+        <span id="toastMsg">Sukses</span>
+    </div>
+
+    <!-- Custom Confirm Modal -->
+    <div id="confirmModal" class="fixed inset-0 bg-slate-900/60 z-[200] hidden flex items-center justify-center p-4 backdrop-blur-sm">
+        <div class="bg-white rounded-xl shadow-xl w-full max-w-sm overflow-hidden relative border border-slate-200">
+            <div class="p-6 text-center">
+                <div class="w-14 h-14 rounded-full bg-red-100 text-red-600 flex items-center justify-center mx-auto mb-4">
+                    <i class="fa-solid fa-triangle-exclamation text-2xl"></i>
+                </div>
+                <h3 class="font-bold text-lg text-slate-800 mb-2" id="confirmTitle">Konfirmasi</h3>
+                <p class="text-sm text-slate-500" id="confirmDesc">Apakah Anda yakin?</p>
+            </div>
+            <div class="bg-slate-50 px-6 py-4 border-t border-slate-200 flex space-x-3">
+                <button onclick="closeConfirm()" class="flex-1 bg-white border border-slate-300 rounded-lg py-2 text-sm font-bold text-slate-700 hover:bg-slate-50 transition-colors">Batal</button>
+                <button id="confirmBtn" class="flex-1 bg-red-600 hover:bg-red-700 rounded-lg py-2 text-sm font-bold text-white transition-colors">Ya, Lanjutkan</button>
+            </div>
+        </div>
+    </div>
+
+    <main class="px-4 py-6 max-w-[1400px] mx-auto">
+        <!-- Tabs -->
+        <div class="flex border-b border-slate-300 mb-6 space-x-8 overflow-x-auto pb-1 no-print relative z-10" style="scrollbar-width: none;">
+            <button id="tab-builder" class="tab-btn tab-active pb-2 text-sm whitespace-nowrap transition-colors" onclick="switchTab('builder')"><i class="fa-solid fa-calendar-days mr-2"></i>Papan Jadwal</button>
+            <button id="tab-assignments" class="tab-btn tab-inactive pb-2 text-sm whitespace-nowrap transition-colors" onclick="switchTab('assignments')"><i class="fa-solid fa-clipboard-user mr-2"></i>Beban Mengajar & Kelas</button>
+            <button id="tab-teachers" class="tab-btn tab-inactive pb-2 text-sm whitespace-nowrap transition-colors" onclick="switchTab('teachers')"><i class="fa-solid fa-user-tie mr-2"></i>Jadwal Guru</button>
+            <button id="tab-settings" class="tab-btn tab-inactive pb-2 text-sm whitespace-nowrap transition-colors" onclick="switchTab('settings')"><i class="fa-solid fa-gear mr-2"></i>Pengaturan</button>
+        </div>
+
+        <!-- TAB 1: PAPAN JADWAL -->
+        <div id="content-builder" class="tab-content block space-y-4">
+            <div class="flex justify-between items-center mb-2 no-print flex-wrap gap-2">
+                <div>
+                    <h2 class="text-lg font-bold text-slate-800">Jadwal Pelajaran Master</h2>
+                    <p class="text-xs text-slate-500">Klik slot kosong, atau <span class="font-bold text-blue-600">Drag & Drop</span>. <span class="font-bold text-green-600">Anti-Bentrok Aktif.</span></p>
+                </div>
+                <div class="flex space-x-2">
+                    <button onclick="autoGenerateSchedule()" class="bg-indigo-600 hover:bg-indigo-700 text-white px-3 py-2 rounded-md text-xs font-semibold shadow-sm transition-colors" title="Auto-Pilot (2JP/4JP Cerdas)"><i class="fa-solid fa-wand-magic-sparkles mr-1.5"></i>Auto-Pilot</button>
+                    <button onclick="exportScheduleToExcel()" class="bg-green-700 hover:bg-green-800 text-white px-3 py-2 rounded-md text-xs font-semibold shadow-sm transition-colors"><i class="fa-solid fa-file-excel mr-1.5"></i>Ekspor Excel</button>
+                    <button onclick="window.print()" class="bg-slate-800 hover:bg-slate-900 text-white px-3 py-2 rounded-md text-xs font-semibold shadow-sm transition-colors hidden sm:block"><i class="fa-solid fa-print mr-1.5"></i>Cetak Tabel</button>
+                </div>
+            </div>
+            <div class="bg-white rounded-xl shadow-sm border border-slate-300 overflow-hidden print-card">
+                <div class="overflow-x-auto max-h-[75vh]">
+                    <table class="excel-table" id="schedule-table">
+                        <thead><tr id="schedule-header" class="excel-header"></tr></thead>
+                        <tbody id="schedule-body"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- TAB 2: BEBAN MENGAJAR -->
+        <div id="content-assignments" class="tab-content hidden space-y-6 relative z-10">
+            <div class="bg-gradient-to-r from-emerald-50 to-green-50 p-5 rounded-xl border border-green-200 shadow-sm flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+                <div class="flex items-center space-x-3">
+                    <div class="bg-green-600 text-white p-3 rounded-lg shadow"><i class="fa-solid fa-rotate text-2xl"></i></div>
+                    <div>
+                        <h4 class="font-bold text-slate-800 text-sm">Sinkronisasi KBM EduLoad</h4>
+                        <p class="text-xs text-slate-600">Unggah <strong class="text-emerald-800">JSON EduLoad</strong>. Tugas administratif diabaikan otomatis.</p>
+                    </div>
+                </div>
+                <input type="file" id="eduload-file-input" accept=".json" class="hidden" onchange="importEduLoadJSON(event)">
+                <button onclick="document.getElementById('eduload-file-input').click()" class="w-full md:w-auto bg-green-700 hover:bg-green-800 text-white font-bold px-4 py-2.5 rounded-lg text-xs transition-colors shadow-sm"><i class="fa-solid fa-file-import mr-2"></i>Sinkronkan EduLoad</button>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <div class="space-y-6">
+                    <!-- Cloud Sync Google Sheets -->
+                    <div class="bg-indigo-50 p-5 rounded-xl border border-indigo-200 shadow-sm relative overflow-hidden">
+                        <div class="absolute top-0 right-0 bg-indigo-500 text-white text-[9px] font-bold px-2 py-1 rounded-bl-lg"><i class="fa-solid fa-bolt mr-1"></i>NEW</div>
+                        <h3 class="text-sm font-bold text-indigo-800 mb-2 border-b border-indigo-200 pb-2"><i class="fa-solid fa-cloud mr-2"></i>Sinkronisasi Cloud (G-Sheets)</h3>
+                        <p class="text-[10px] text-indigo-600 mb-3 leading-tight">Simpan jadwal ke Google Drive agar bisa diakses dari laptop lain tanpa flashdisk.</p>
+                        
+                        <input type="password" id="gas-url-input" placeholder="Paste URL Web App GAS di sini..." class="w-full text-[10px] border border-indigo-300 rounded p-2 bg-white mb-2 outline-none focus:ring-1 focus:ring-indigo-500">
+                        
+                        <div class="flex gap-2 mb-2">
+                            <button onclick="saveGasUrl()" class="flex-1 bg-white border border-indigo-500 hover:bg-indigo-100 text-indigo-700 font-bold py-1.5 rounded-md text-[10px] shadow-sm transition-colors">Simpan URL</button>
+                            <button onclick="checkGasUrl()" class="w-8 bg-indigo-100 hover:bg-indigo-200 text-indigo-600 rounded-md flex justify-center items-center" title="Lihat URL"><i class="fa-solid fa-eye text-[10px]"></i></button>
+                        </div>
+
+                        <div class="flex gap-2 mt-3 pt-3 border-t border-indigo-200">
+                            <button id="btn-save-cloud" onclick="pushToCloud()" class="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 rounded-md text-xs shadow-sm transition-colors flex justify-center items-center"><i class="fa-solid fa-cloud-arrow-up mr-1.5"></i>Simpan</button>
+                            <button id="btn-load-cloud" onclick="pullFromCloud()" class="flex-1 bg-teal-600 hover:bg-teal-700 text-white font-bold py-2 rounded-md text-xs shadow-sm transition-colors flex justify-center items-center"><i class="fa-solid fa-cloud-arrow-down mr-1.5"></i>Tarik</button>
+                        </div>
+                    </div>
+
+                    <!-- Backup Restore -->
+                    <div class="bg-blue-50 p-5 rounded-xl border border-blue-200 shadow-sm">
+                        <h3 class="text-sm font-bold text-blue-800 mb-2 border-b border-blue-200 pb-2"><i class="fa-solid fa-cloud-arrow-down mr-2"></i>Backup & Restore EduSched</h3>
+                        <button onclick="exportEduSchedJSON()" class="w-full bg-white border border-blue-500 hover:bg-blue-100 text-blue-700 font-bold py-2 rounded-md text-xs mb-3 shadow-sm"><i class="fa-solid fa-download mr-1"></i> Backup Jadwal (.json)</button>
+                        <input type="file" id="edusched-restore-input" accept=".json" class="w-full text-[10px] border border-blue-300 rounded p-1.5 bg-white mb-2">
+                        <button onclick="importEduSchedJSON()" class="w-full bg-blue-700 hover:bg-blue-800 text-white font-bold py-2 rounded-md text-xs"><i class="fa-solid fa-upload mr-1"></i> Pulihkan</button>
+                    </div>
+                    
+                    <!-- Block Spot -->
+                    <div class="bg-amber-50 p-5 rounded-xl border border-amber-200 shadow-sm">
+                        <h4 class="text-xs font-bold text-amber-800 mb-2 border-b border-amber-200 pb-2"><i class="fa-solid fa-user-lock mr-1.5"></i>Block Spot Guru</h4>
+                        <select id="block-teacher-select" class="w-full text-xs border border-slate-300 rounded p-2 outline-none bg-white mb-2"></select>
+                        <div class="flex space-x-2 flex-wrap gap-y-2" id="block-days-container"></div>
+                        <button onclick="saveTeacherBlock()" class="w-full bg-amber-600 hover:bg-amber-700 text-white font-bold py-2 rounded-md text-xs mt-3">Simpan Block Spot</button>
+                    </div>
+
+                    <!-- Tambah Waktu & Reset -->
+                    <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm space-y-3">
+                        <h4 class="text-xs font-bold text-slate-700 border-b pb-2">Tambah Baris Waktu</h4>
+                        <input type="text" id="new-row-time" placeholder="Waktu (Cth: 07.40-08.10)" class="w-full text-xs border rounded p-2 outline-none">
+                        <select id="new-row-type" class="w-full text-xs border rounded p-2 bg-white"><option value="kbm">KBM</option><option value="break">Istirahat / Agenda</option></select>
+                        <input type="text" id="new-row-label" placeholder="Label (Cth: 1)" class="w-full text-xs border rounded p-2 outline-none">
+                        <button onclick="addTimeRow()" class="w-full bg-slate-800 text-white font-bold py-2 rounded-md text-xs">+ Tambah Baris</button>
+                    </div>
+                    <button onclick="clearAllData()" class="w-full text-red-600 bg-red-50 hover:bg-red-100 font-bold py-3 text-sm border border-red-200 rounded-lg">Kosongkan Semua Data</button>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Modal Plotting -->
+    <div id="plotModal" class="fixed inset-0 bg-slate-900/60 z-[100] hidden flex items-center justify-center p-4 backdrop-blur-sm">
+        <div class="bg-white rounded-xl w-full max-w-lg overflow-hidden relative shadow-2xl">
+            <div class="px-5 py-3 bg-[#92d050] flex justify-between items-center text-black border-b border-slate-200">
+                <div>
+                    <h3 class="font-bold text-sm" id="modal-plot-title">Plot Jadwal</h3>
+                    <p class="text-[10px] font-medium" id="modal-plot-subtitle"></p>
+                </div>
+                <button onclick="closePlotModal()" class="text-slate-800 hover:bg-white/20 px-2 py-1 rounded"><i class="fa-solid fa-xmark text-lg"></i></button>
+            </div>
+            <div class="p-4 bg-slate-50 min-h-[250px]">
+                <div id="assignment-options" class="space-y-2 max-h-[300px] overflow-y-auto pr-2"></div>
+                <div id="no-assignment-msg" class="hidden text-center py-6">
+                    <p class="text-xs text-slate-500 mb-2">Belum ada beban mengajar.</p>
+                    <button onclick="closePlotModal(); switchTab('assignments');" class="text-blue-600 text-xs font-bold underline">Input Beban</button>
+                </div>
+            </div>
+            <div class="bg-white px-5 py-3 border-t border-slate-200 flex justify-between">
+                <button id="btn-delete-plot" onclick="removePlot()" class="text-red-600 bg-red-50 px-3 py-1.5 rounded text-xs font-bold hidden"><i class="fa-solid fa-trash mr-1"></i>Kosongkan</button>
+                <button onclick="closePlotModal()" class="ml-auto text-slate-600 hover:bg-slate-100 px-4 py-1.5 rounded text-xs font-bold">Batal</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MAIN SCRIPT (OPTIMIZED & ENHANCED) -->
+    <script>
+        // Data & State Constants
+        const KEYS = { cls: 'esched_v2_classes', asg: 'esched_v2_assignments', sch: 'esched_v2_schedule', row: 'esched_v2_rows', blk: 'esched_v2_blocks', gas: 'esched_v2_gas_url' };
+        const DEFAULT_DAYS = ['SENIN', 'SELASA', 'RABU', 'KAMIS', 'JUMAT'];
+        
+        // Memastikan default rows memiliki atribut 'days'
+        const DEFAULT_ROWS = [
+            { id: 'r1', time: '07.30-07.40', type: 'break', label: 'Apel / Pra-KBM', days: [...DEFAULT_DAYS] }, 
+            { id: 'r2', time: '07.40-08.10', type: 'kbm', label: '1', days: [...DEFAULT_DAYS] },
+            { id: 'r3', time: '08.10-08.40', type: 'kbm', label: '2', days: [...DEFAULT_DAYS] }, 
+            { id: 'r4', time: '08.40-09.10', type: 'kbm', label: '3', days: [...DEFAULT_DAYS] },
+            { id: 'r5', time: '09.10-09.40', type: 'kbm', label: '4', days: [...DEFAULT_DAYS] }, 
+            { id: 'r6', time: '09.40-10.10', type: 'kbm', label: '5', days: [...DEFAULT_DAYS] },
+            { id: 'r7', time: '10.10-10.30', type: 'break', label: 'Istirahat', days: [...DEFAULT_DAYS] }, 
+            { id: 'r8', time: '10.30-11.00', type: 'kbm', label: '6', days: [...DEFAULT_DAYS] },
+            { id: 'r9', time: '11.00-11.30', type: 'kbm', label: '7', days: [...DEFAULT_DAYS] }, 
+            { id: 'r10', time: '11.30-12.00', type: 'break', label: 'Shalat', days: [...DEFAULT_DAYS] },
+        ];
+
+        let classes = [], assignments = [], schedule = [], rows = [], teacherBlocks = {};
+        let currentModalData = { day: null, rowId: null, classId: null, existingPlotId: null }, draggedPlot = null;
+        let confirmAction = null;
+        let gasUrl = '';
+
+        // --- HELPER UNTUK LENCANA HARI ---
+        function toggleDayBtn(btn) {
+            const isActive = btn.classList.contains('active-day');
+            if(isActive) {
+                btn.classList.remove('active-day', 'bg-green-100', 'text-green-700', 'border-green-300', 'font-bold');
+                btn.classList.add('bg-slate-50', 'text-slate-300', 'border-slate-200');
+            } else {
+                btn.classList.add('active-day', 'bg-green-100', 'text-green-700', 'border-green-300', 'font-bold');
+                btn.classList.remove('bg-slate-50', 'text-slate-300', 'border-slate-200');
+            }
+        }
+
+        // --- CUSTOM CONFIRM MODAL (Sandbox Safe) ---
+        function showConfirm(title, desc, action) {
+            document.getElementById('confirmTitle').innerText = title;
+            document.getElementById('confirmDesc').innerText = desc;
+            confirmAction = action;
+            document.getElementById('confirmModal').classList.remove('hidden');
+        }
+        function closeConfirm() { document.getElementById('confirmModal').classList.add('hidden'); }
+        document.getElementById('confirmBtn').onclick = () => { if(confirmAction) confirmAction(); closeConfirm(); };
+
+        // --- CORE & STORAGE ---
+        function loadData() {
+            classes = JSON.parse(localStorage.getItem(KEYS.cls)) || [{id: 'c1', name: 'VII'}, {id: 'c2', name: 'VIII'}, {id: 'c3', name: 'IX'}];
+            assignments = JSON.parse(localStorage.getItem(KEYS.asg)) || [];
+            schedule = JSON.parse(localStorage.getItem(KEYS.sch)) || [];
+            rows = JSON.parse(localStorage.getItem(KEYS.row)) || DEFAULT_ROWS;
+            
+            // Migrasi untuk pengguna lama: Tambahkan array 'days' jika belum ada
+            rows.forEach(r => { if(!r.days) r.days = [...DEFAULT_DAYS]; });
+            
+            teacherBlocks = JSON.parse(localStorage.getItem(KEYS.blk)) || {};
+            gasUrl = localStorage.getItem(KEYS.gas) || '';
+            if(gasUrl) document.getElementById('gas-url-input').value = gasUrl;
+            
+            updateUI();
+        }
+
+        function saveData(refresh = true) {
+            localStorage.setItem(KEYS.cls, JSON.stringify(classes)); localStorage.setItem(KEYS.asg, JSON.stringify(assignments));
+            localStorage.setItem(KEYS.sch, JSON.stringify(schedule)); localStorage.setItem(KEYS.row, JSON.stringify(rows));
+            localStorage.setItem(KEYS.blk, JSON.stringify(teacherBlocks));
+            if(refresh) updateUI();
+        }
+
+        function showToast(msg, isErr = false) {
+            const toast = document.getElementById('toast'), icon = document.getElementById('toastIcon');
+            document.getElementById('toastMsg').innerText = msg;
+            toast.className = `fixed top-20 left-1/2 transform -translate-x-1/2 text-white px-4 py-2.5 rounded-lg shadow-xl z-[100] transition-all duration-300 flex items-center text-sm font-medium border border-slate-700 ${isErr ? 'bg-red-600' : 'bg-slate-800'}`;
+            icon.className = `fa-solid ${isErr ? 'fa-triangle-exclamation text-white' : 'fa-circle-check text-green-400'} mr-2`;
+            setTimeout(() => toast.classList.add('opacity-0'), 2500);
+        }
+
+        function switchTab(tabId) {
+            document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
+            document.querySelectorAll('.tab-btn').forEach(el => { el.classList.remove('tab-active'); el.classList.add('tab-inactive'); });
+            document.getElementById('content-' + tabId).classList.remove('hidden');
+            const activeTab = document.getElementById('tab-' + tabId);
+            activeTab.classList.remove('tab-inactive'); activeTab.classList.add('tab-active');
+            if(tabId === 'builder') renderScheduleTable();
+            if(tabId === 'assignments') renderAssignments();
+            if(tabId === 'settings') renderRowSettings();
+            if(tabId === 'teachers') updateTeacherDropdown();
+        }
+
+        function clearAllData() {
+            showConfirm("Reset Database?", "Tindakan ini menghapus semua jadwal, rombel, dan penugasan secara permanen.", () => {
+                classes = []; assignments = []; schedule = []; rows = DEFAULT_ROWS; saveData(); showToast("Reset sukses.");
+            });
+        }
+
+        function updateUI() { 
+            renderAssignments(); 
+            renderScheduleTable(); 
+            updateTeacherDropdown(); 
+            if(!document.getElementById('content-teachers').classList.contains('hidden')) renderTeacherSchedule(); 
+        }
+
+        // --- JSON EDULOAD SYNC ---
+        function importEduLoadJSON(e) {
+            const file = e.target.files[0]; if (!file) return;
+            const reader = new FileReader();
+            reader.onload = function(evt) {
+                try {
+                    const data = JSON.parse(evt.target.result);
+                    if (!Array.isArray(data)) return showToast("JSON tidak valid.", true);
+
+                    let addC = 0, addA = 0;
+                    const excludeKw = ['piket', 'wali kelas', 'pembina', 'ekskul', 'kepala sekolah', 'tugas tambahan', 'bimbingan', 'bk', 'koordinator'];
+
+                    const processSubject = (clsName, jp, subjectName, teacherName) => {
+                        subjectName = (subjectName || "").trim();
+                        if (jp > 0 && subjectName && !excludeKw.some(kw => subjectName.toLowerCase().includes(kw))) {
+                            let classObj = classes.find(c => c.name === clsName);
+                            if (!classObj) { classObj = { id: 'c_' + Date.now() + Math.random(), name: clsName }; classes.push(classObj); addC++; }
+                            if (!assignments.some(a => a.classId === classObj.id && a.subject === subjectName && a.teacher === teacherName)) {
+                                assignments.push({ id: 'as_' + Date.now() + Math.random(), classId: classObj.id, subject: subjectName, teacher: teacherName, jp: jp }); addA++;
+                            }
+                        }
+                    };
+
+                    data.forEach(t => {
+                        if (t.subjects) t.subjects.forEach(s => { if(s.classes) Object.keys(s.classes).forEach(cls => processSubject(cls, parseInt(s.classes[cls])||0, s.name, t.name)); });
+                        else if (t.classes) Object.keys(t.classes).forEach(cls => processSubject(cls, parseInt(t.classes[cls])||0, t.subject, t.name));
+                    });
+
+                    saveData(); showToast(`Sinkronisasi Sukses! +${addC} Kelas, +${addA} Beban Mapel KBM.`);
+                } catch (err) { showToast("Gagal memproses file.", true); }
+            }; reader.readAsText(file);
+        }
+
+        // --- JSON EDUSCHED BACKUP/RESTORE ---
+        function exportEduSchedJSON() {
+            if (classes.length === 0 && assignments.length === 0) return showToast("Kosong.", true);
+            const blob = new Blob([JSON.stringify({classes, assignments, schedule, rows, blocks: teacherBlocks}, null, 2)], { type: "application/json" });
+            const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = `EduSched_Backup_${new Date().toISOString().slice(0,10)}.json`; a.click(); showToast("Diunduh.");
+        }
+        function importEduSchedJSON() {
+            const input = document.getElementById('edusched-restore-input'); if(!input.files[0]) return;
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const d = JSON.parse(e.target.result);
+                    if(d.classes && d.assignments && d.rows) {
+                        showConfirm("Pulihkan & Timpa Jadwal?", "Jadwal dan pengaturan lama akan tertimpa dengan data backup ini.", () => {
+                            classes = d.classes; assignments = d.assignments; schedule = d.schedule || []; rows = d.rows; teacherBlocks = d.blocks || {};
+                            // Failsafe migration
+                            rows.forEach(r => { if(!r.days) r.days = [...DEFAULT_DAYS]; });
+                            saveData(); input.value = ""; showToast("Dipulihkan!"); switchTab('builder');
+                        });
+                    } else showToast("Format Backup Salah.", true);
+                } catch(err) { showToast("Gagal membaca.", true); }
+            }; reader.readAsText(input.files[0]);
+        }
+
+        // --- CLOUD SYNC (GOOGLE SHEETS) ---
+        function saveGasUrl() {
+            const url = document.getElementById('gas-url-input').value.trim();
+            gasUrl = url; localStorage.setItem(KEYS.gas, gasUrl);
+            showToast(url ? "URL Cloud Disimpan!" : "URL Cloud Dikosongkan.");
+        }
+
+        function checkGasUrl() {
+            const inp = document.getElementById('gas-url-input');
+            inp.type = inp.type === 'password' ? 'text' : 'password';
+        }
+
+        async function pushToCloud() {
+            if(!gasUrl) return showToast("Masukkan URL GAS dulu!", true);
+            if(classes.length === 0 && assignments.length === 0) return showToast("Data masih kosong.", true);
+            
+            const btn = document.getElementById('btn-save-cloud');
+            const originalText = btn.innerHTML;
+            btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-1.5"></i>Menyimpan...';
+            btn.disabled = true;
+
+            try {
+                const payload = { classes, assignments, schedule, rows, blocks: teacherBlocks };
+                const response = await fetch(gasUrl, {
+                    method: 'POST',
+                    body: JSON.stringify(payload) // Plain text mode needed for GAS CORS
+                });
+                const result = await response.json();
+                if(result.status === 'success') showToast("Berhasil disimpan ke Google Sheets!");
+                else showToast("Gagal: " + (result.message || "Unknown error"), true);
+            } catch (error) {
+                console.error(error);
+                showToast("Gagal terhubung ke Cloud. Cek URL/Koneksi.", true);
+            } finally {
+                btn.innerHTML = originalText; btn.disabled = false;
+            }
+        }
+
+        async function pullFromCloud() {
+            if(!gasUrl) return showToast("Masukkan URL GAS dulu!", true);
+            
+            showConfirm("Tarik dari Cloud?", "Data di laptop ini akan DITIMPA dengan data dari Google Sheets. Pastikan data Cloud adalah yang terbaru.", async () => {
+                const btn = document.getElementById('btn-load-cloud');
+                const originalText = btn.innerHTML;
+                btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-1.5"></i>Menarik...';
+                btn.disabled = true;
+
+                try {
+                    const response = await fetch(gasUrl);
+                    const d = await response.json();
+                    
+                    if(d.classes && d.assignments && d.rows) {
+                        classes = d.classes; assignments = d.assignments; schedule = d.schedule || []; rows = d.rows; teacherBlocks = d.blocks || {};
+                        rows.forEach(r => { if(!r.days) r.days = [...DEFAULT_DAYS]; });
+                        saveData(); showToast("Data Cloud berhasil dimuat!"); switchTab('builder');
+                    } else {
+                        showToast("Format Cloud salah atau Kosong.", true);
+                    }
+                } catch (error) {
+                    console.error(error);
+                    showToast("Gagal terhubung ke Cloud. Cek URL/Koneksi.", true);
+                } finally {
+                    btn.innerHTML = originalText; btn.disabled = false;
+                }
+            });
+        }
+
+        // --- ASSIGNMENTS / CLASSES ---
+        function addClass(e) {
+            e.preventDefault(); const name = document.getElementById('class-input').value.trim().toUpperCase();
+            if(!name || classes.some(c => c.name === name)) return showToast("Gagal/Sudah ada!", true);
+            classes.push({ id: 'c_' + Date.now(), name }); saveData(); document.getElementById('class-input').value = '';
+        }
+        
+        function removeClass(id) {
+            showConfirm("Hapus Kelas?", "Rombel ini dan semua jadwal KBM yang bersangkutan akan ikut terhapus. Lanjutkan?", () => {
+                classes = classes.filter(c => c.id !== id); assignments = assignments.filter(a => a.classId !== id); schedule = schedule.filter(s => s.classId !== id); saveData();
+            });
+        }
+        
+        function saveAssignment(e) {
+            e.preventDefault();
+            const cid = document.getElementById('assign-class').value, sub = document.getElementById('assign-subject').value.trim(), tch = document.getElementById('assign-teacher').value.trim(), jp = parseInt(document.getElementById('assign-jp').value), editId = document.getElementById('edit-assign-id').value;
+            if(!cid || !sub || !tch || !jp) return;
+
+            if(assignments.some(a => a.classId === cid && a.subject === sub && a.teacher === tch && a.id !== editId)) return showToast("Beban ini sudah ada di kelas tersebut!", true);
+
+            if(editId) {
+                const idx = assignments.findIndex(x => x.id === editId);
+                if(idx > -1) { assignments[idx].classId = cid; assignments[idx].subject = sub; assignments[idx].teacher = tch; assignments[idx].jp = jp; showToast("Diupdate."); }
+            } else {
+                assignments.push({ id: 'as_' + Date.now(), classId: cid, subject: sub, teacher: tch, jp }); showToast("Ditambahkan.");
+            }
+            cancelEditAssign(); document.getElementById('assign-class').value = cid; saveData(); 
+        }
+
+        function cancelEditAssign() {
+            document.getElementById('form-assign').reset(); document.getElementById('edit-assign-id').value = ""; document.getElementById('btn-save-assign').innerText = "Simpan Penugasan"; document.getElementById('btn-cancel-assign').classList.add('hidden');
+        }
+
+        function editAssignment(id) {
+            const a = assignments.find(x => x.id === id); if(!a) return;
+            document.getElementById('edit-assign-id').value = id; document.getElementById('assign-class').value = a.classId; document.getElementById('assign-subject').value = a.subject; document.getElementById('assign-teacher').value = a.teacher; document.getElementById('assign-jp').value = a.jp;
+            document.getElementById('btn-save-assign').innerText = "Update Data"; document.getElementById('btn-cancel-assign').classList.remove('hidden'); window.scrollTo({top: 0, behavior: 'smooth'});
+        }
+
+        function removeAssignment(id) { 
+            showConfirm("Hapus Beban Mengajar?", "Guru dan mapel ini akan dihapus dari kelas. Slot jadwal di tabel akan ikut dikosongkan.", () => { assignments = assignments.filter(a => a.id !== id); schedule = schedule.filter(s => s.assignId !== id); saveData(); }); 
+        }
+
+        function renderAssignments() {
+            let clHtml = [], optHtml = ['<option value="">-- Pilih Kelas --</option>'];
+            classes.forEach(c => {
+                clHtml.push(`<div class="bg-slate-100 border border-slate-300 px-3 py-1.5 rounded-md text-xs font-bold flex gap-2">${c.name} <button onclick="removeClass('${c.id}')" class="text-slate-400 hover:text-red-500"><i class="fa-solid fa-xmark"></i></button></div>`);
+                optHtml.push(`<option value="${c.id}">${c.name}</option>`);
+            });
+            document.getElementById('class-list').innerHTML = clHtml.join('');
+            document.getElementById('assign-class').innerHTML = optHtml.join('');
+
+            const uniqueSubs = [...new Set(assignments.map(a => a.subject))].sort();
+            const uniqueTchs = [...new Set(assignments.map(a => a.teacher))].sort();
+            document.getElementById('dl-subjects').innerHTML = uniqueSubs.map(s => `<option value="${s}">`).join('');
+            document.getElementById('dl-teachers').innerHTML = uniqueTchs.map(t => `<option value="${t}">`).join('');
+
+            let trHtml = [];
+            [...assignments].sort((a,b)=>(classes.find(c=>c.id===a.classId)?.name||'').localeCompare(classes.find(c=>c.id===b.classId)?.name||'')).forEach(a => {
+                const cName = classes.find(c => c.id === a.classId)?.name || 'N/A', pC = schedule.filter(s => s.assignId === a.id).length;
+                const cCol = pC >= a.jp ? 'text-green-600 bg-green-50' : (pC>0 ? 'text-blue-600 bg-blue-50' : 'text-slate-500');
+                trHtml.push(`<tr class="hover:bg-slate-50"><td class="p-2.5 font-bold text-slate-700">${cName}</td><td class="p-2.5 font-semibold">${a.subject}</td><td class="p-2.5 text-slate-600">${a.teacher}</td><td class="p-2.5 text-center font-bold">${a.jp}</td><td class="p-2.5 text-center"><span class="px-2 py-0.5 rounded text-[10px] font-bold ${cCol}">${pC} / ${a.jp}</span></td><td class="p-2.5 text-center"><button onclick="editAssignment('${a.id}')" class="text-blue-500 hover:text-blue-700 mr-2"><i class="fa-solid fa-pen text-xs"></i></button><button onclick="removeAssignment('${a.id}')" class="text-red-500 hover:text-red-700"><i class="fa-solid fa-trash text-xs"></i></button></td></tr>`);
+            });
+            document.getElementById('assignments-tbody').innerHTML = trHtml.join('');
+            document.getElementById('total-assignments-badge').innerText = assignments.length;
+        }
+
+        // --- SCHEDULE TABLE RENDER (DYNAMIC ROW SPAN) ---
+        function renderScheduleTable() {
+            const head = document.getElementById('schedule-header'), body = document.getElementById('schedule-body');
+            if(classes.length === 0) { head.innerHTML = '<th class="p-4 text-xs">Belum ada Kelas.</th>'; body.innerHTML = ''; return; }
+
+            let hHtml = ['<th class="w-[40px] text-center excel-header">HARI</th><th class="w-[110px] text-center excel-header">Waktu</th><th class="w-[60px] text-center excel-header">Jam Ke-</th>'];
+            classes.forEach(c => hHtml.push(`<th class="min-w-[120px] text-center excel-header">${c.name}</th>`));
+            head.innerHTML = hHtml.join('');
+
+            let bHtml = [];
+            DEFAULT_DAYS.forEach((day) => {
+                // Filter baris (rows) yang khusus berlaku pada hari ini
+                const dayRows = rows.filter(r => !r.days || r.days.includes(day));
+                
+                dayRows.forEach((row, rI) => {
+                    bHtml.push('<tr>');
+                    if(rI === 0) bHtml.push(`<td rowspan="${dayRows.length}" class="excel-day text-center">${day}</td>`);
+                    
+                    if(row.type === 'break') {
+                        bHtml.push(`<td class="excel-time text-[10px] text-center">${row.time}</td><td colspan="${classes.length + 1}" class="excel-break text-center uppercase tracking-widest">${row.label}</td>`);
+                    } else {
+                        bHtml.push(`<td class="excel-time text-[10px] text-center">${row.time}</td><td class="text-center font-bold text-slate-700 bg-slate-50">${row.label}</td>`);
+                        classes.forEach(c => {
+                            const p = schedule.find(s => s.day === day && s.rowId === row.id && s.classId === c.id);
+                            if(p) {
+                                const a = assignments.find(x => x.id === p.assignId);
+                                if(a) {
+                                    const conf = schedule.some(s => s.id !== p.id && s.day === day && s.rowId === row.id && assignments.find(x=>x.id===s.assignId)?.teacher === a.teacher);
+                                    bHtml.push(`<td class="slot-filled ${conf ? 'bg-red-100' : ''} text-center" draggable="true" ondragstart="handleDragStart(event, '${p.id}', '${day}', '${row.id}', '${c.id}')" ondragover="handleDragOver(event)" ondrop="handleDrop(event, '${day}', '${row.id}', '${c.id}', '${p.id}')" onclick="openPlotModal('${day}', '${row.id}', '${c.id}', '${c.name}', '${p.id}')"><div class="text-[11px] font-bold ${conf ? 'text-red-700 animate-pulse' : 'text-slate-800'} leading-tight truncate px-1 pointer-events-none">${a.subject}</div><div class="text-[9px] text-slate-500 truncate mt-0.5 pointer-events-none">${conf ? '<i class="fa-solid fa-triangle-exclamation text-red-500 mr-1"></i>' : ''}${a.teacher}</div></td>`);
+                                } else bHtml.push(`<td class="slot-filled bg-red-50 text-red-400 text-[10px] text-center" onclick="removePlotById('${p.id}')">Invalid</td>`);
+                            } else bHtml.push(`<td class="slot-clickable" ondragover="handleDragOver(event)" ondrop="handleDrop(event, '${day}', '${row.id}', '${c.id}', null)" onclick="openPlotModal('${day}', '${row.id}', '${c.id}', '${c.name}', null)"></td>`);
+                        });
+                    }
+                    bHtml.push('</tr>');
+                });
+            });
+            body.innerHTML = bHtml.join('');
+        }
+
+        // --- MODAL & PLOT & DRAG DROP ---
+        function openPlotModal(day, rowId, classId, className, existId) {
+            currentModalData = { day, rowId, classId, existingPlotId: existId };
+            const rInfo = rows.find(r => r.id === rowId), optDiv = document.getElementById('assignment-options'), msg = document.getElementById('no-assignment-msg');
+            document.getElementById('modal-plot-title').innerText = `Plotting: ${className}`; document.getElementById('modal-plot-subtitle').innerText = `${day} | Waktu: ${rInfo.time}`;
+            
+            const asgs = assignments.filter(a => a.classId === classId);
+            if(asgs.length === 0) { optDiv.innerHTML = ''; msg.classList.remove('hidden'); }
+            else {
+                msg.classList.add('hidden'); let opts = [];
+                asgs.forEach(a => {
+                    const pC = schedule.filter(s => s.assignId === a.id).length, isSel = existId && schedule.find(s=>s.id===existId)?.assignId===a.id;
+                    const isBsy = schedule.some(s => s.day === day && s.rowId === rowId && s.id !== existId && assignments.find(x=>x.id===s.assignId)?.teacher === a.teacher);
+                    const isBlk = teacherBlocks[a.teacher] && teacherBlocks[a.teacher].includes(day);
+                    
+                    let bCls = "w-full text-left p-3 rounded-lg border border-slate-200 hover:border-blue-400 transition-colors flex justify-between items-center bg-white", lbl = `<span class="text-[10px] bg-slate-100 px-2 py-1 rounded font-bold">${pC}/${a.jp} JP</span>`, act = `onclick="commitPlot('${a.id}')"`;
+                    
+                    if(isSel) { bCls = "w-full text-left p-3 rounded-lg border-2 border-green-500 bg-green-50 flex justify-between items-center"; lbl = `<span class="text-[10px] bg-green-500 text-white px-2 py-1 rounded font-bold"><i class="fa-solid fa-check"></i> Terpilih</span>`; }
+                    else if(isBsy) { bCls += " opacity-50 cursor-not-allowed bg-red-50"; lbl = `<span class="text-[10px] bg-red-100 text-red-700 px-2 py-1 rounded font-bold">Bentrok</span>`; act = `onclick="showToast('Guru mengajar di kelas lain!', true)"`; }
+                    else if(isBlk) { bCls += " opacity-50 cursor-not-allowed bg-amber-50"; lbl = `<span class="text-[10px] bg-amber-100 text-amber-700 px-2 py-1 rounded font-bold">Libur</span>`; act = `onclick="showToast('Guru libur/diblokir hari ini!', true)"`; }
+                    else if(pC >= a.jp) { bCls += " opacity-50"; lbl = `<span class="text-[10px] bg-slate-200 px-2 py-1 rounded font-bold">Penuh</span>`; }
+
+                    opts.push(`<button ${act} class="${bCls}"><div><div class="font-bold text-xs text-slate-800">${a.subject}</div><div class="text-[10px] text-slate-500 mt-0.5">${a.teacher}</div></div>${lbl}</button>`);
+                });
+                optDiv.innerHTML = opts.join('');
+            }
+            document.getElementById('btn-delete-plot').classList.toggle('hidden', !existId);
+            document.getElementById('plotModal').classList.remove('hidden');
+        }
+        function closePlotModal() { document.getElementById('plotModal').classList.add('hidden'); }
+        function commitPlot(aId) { const { day, rowId, classId, existingPlotId: eId } = currentModalData; if(eId) schedule.find(s=>s.id===eId).assignId = aId; else schedule.push({id:'sch_'+Date.now(), day, rowId, classId, assignId:aId}); saveData(); closePlotModal(); showToast("Tersimpan."); }
+        function removePlot() { if(currentModalData.existingPlotId) { schedule = schedule.filter(s => s.id !== currentModalData.existingPlotId); saveData(); closePlotModal(); showToast("Dikosongkan."); } }
+        function removePlotById(id) { schedule = schedule.filter(s => s.id !== id); saveData(); showToast("Dihapus."); }
+
+        function handleDragStart(e, pId, day, rowId, cId) { draggedPlot = { pId, day, rowId, cId }; e.dataTransfer.effectAllowed = "move"; }
+        function handleDragOver(e) { e.preventDefault(); e.dataTransfer.dropEffect = "move"; }
+        function handleDrop(e, tDay, tRowId, tCid, tPid) {
+            e.preventDefault(); if(!draggedPlot || draggedPlot.pId === tPid || draggedPlot.cId !== tCid) return;
+            const srcIdx = schedule.findIndex(s => s.id === draggedPlot.pId), srcP = schedule[srcIdx], srcA = assignments.find(a => a.id === srcP.assignId);
+            if(teacherBlocks[srcA.teacher]?.includes(tDay) || schedule.some(s=>s.day===tDay && s.rowId===tRowId && s.id!==srcP.id && s.id!==tPid && assignments.find(a=>a.id===s.assignId)?.teacher===srcA.teacher)) return showToast("Gagal: Bentrok/Blok!", true);
+            if(tPid) {
+                const tP = schedule.find(s=>s.id===tPid), tA = assignments.find(a=>a.id===tP.assignId);
+                if(teacherBlocks[tA.teacher]?.includes(srcP.day) || schedule.some(s=>s.day===srcP.day && s.rowId===srcP.rowId && s.id!==tPid && s.id!==srcP.id && assignments.find(a=>a.id===s.assignId)?.teacher===tA.teacher)) return showToast("Gagal Tukar: Bentrok/Blok!", true);
+                srcP.day = tDay; srcP.rowId = tRowId; tP.day = draggedPlot.day; tP.rowId = draggedPlot.rowId;
+            } else { srcP.day = tDay; srcP.rowId = tRowId; }
+            draggedPlot = null; saveData();
+        }
+
+        // --- ROW SETTINGS & TEACHERS (DAY-SPECIFIC ROWS) ---
+        function renderRowSettings() {
+            let h = [];
+            rows.forEach((r, i) => {
+                let daysHtml = DEFAULT_DAYS.map(d => {
+                    let active = r.days.includes(d);
+                    return `<button type="button" onclick="toggleDayBtn(this)" data-day="${d}" class="day-btn mx-0.5 px-1.5 py-0.5 text-[9px] rounded border ${active ? 'active-day bg-green-100 text-green-700 font-bold border-green-300' : 'bg-slate-50 text-slate-300 border-slate-200'}" title="${d}">${d.substring(0,1)}</button>`;
+                }).join('');
+
+                h.push(`<tr class="hover:bg-slate-50" data-rid="${r.id}">
+                    <td class="p-2"><input type="text" value="${r.time}" class="rt-inp w-full border border-slate-300 rounded p-1.5 text-xs text-center bg-white outline-none"></td>
+                    <td class="p-2"><select class="rty-sel w-full border border-slate-300 rounded p-1.5 text-xs outline-none"><option value="kbm" ${r.type==='kbm'?'selected':''}>KBM</option><option value="break" ${r.type==='break'?'selected':''}>Istirahat</option></select></td>
+                    <td class="p-2 text-center flex justify-center mt-1.5">${daysHtml}</td>
+                    <td class="p-2"><input type="text" value="${r.label}" class="rl-inp w-full border border-slate-300 rounded p-1.5 text-xs bg-white outline-none"></td>
+                    <td class="p-2 text-center"><button onclick="moveRow(${i}, -1)" class="px-2 py-1 bg-slate-100 border border-slate-300 rounded-l-md"><i class="fa-solid fa-arrow-up text-[10px]"></i></button><button onclick="moveRow(${i}, 1)" class="px-2 py-1 bg-slate-100 border-y border-r border-slate-300 rounded-r-md"><i class="fa-solid fa-arrow-down text-[10px]"></i></button></td>
+                    <td class="p-2 text-center"><button onclick="deleteTimeRow('${r.id}')" class="text-red-500"><i class="fa-solid fa-trash"></i></button></td>
+                </tr>`);
+            });
+            document.getElementById('row-structure-list').innerHTML = h.join('');
+        }
+        function moveRow(i, dir) { const tI = i+dir; if(tI<0 || tI>=rows.length) return; const t=rows[i]; rows[i]=rows[tI]; rows[tI]=t; saveData(false); renderRowSettings(); }
+        
+        function saveRowSettingsChanges() {
+            let changed=false; 
+            document.querySelectorAll('#row-structure-list tr').forEach(tr => {
+                const r = rows.find(x => x.id === tr.getAttribute('data-rid'));
+                if(r) { 
+                    const t=tr.querySelector('.rt-inp').value.trim(), y=tr.querySelector('.rty-sel').value, l=tr.querySelector('.rl-inp').value.trim(); 
+                    const activeDays = Array.from(tr.querySelectorAll('.day-btn.active-day')).map(b => b.getAttribute('data-day'));
+                    
+                    if(r.time!==t || r.type!==y || r.label!==l || r.days.join(',') !== activeDays.join(',')){
+                        if(activeDays.length === 0) return; // Failsafe agar baris minimal punya 1 hari
+                        r.time=t; r.type=y; r.label=l; r.days=activeDays; changed=true;
+                    } 
+                }
+            }); 
+            if(changed){saveData(); showToast("Struktur Disimpan");}
+        }
+        function addTimeRow() { const t=document.getElementById('new-row-time').value.trim(), y=document.getElementById('new-row-type').value, l=document.getElementById('new-row-label').value.trim(); if(!t||!l) return; rows.push({id:'r_'+Date.now(), time:t, type:y, label:l, days: [...DEFAULT_DAYS]}); saveData(); renderRowSettings(); }
+        function deleteTimeRow(id) { showConfirm("Hapus Baris Waktu?", "Seluruh jadwal yang terplot pada jam ini akan ikut terhapus.", () => { rows=rows.filter(r=>r.id!==id); schedule=schedule.filter(s=>s.rowId!==id); saveData(); renderRowSettings(); }); }
+
+        function printTeacherSchedule() {
+            const t = document.getElementById('teacher-select').value;
+            if(!t) return showToast("Pilih guru terlebih dahulu!", true);
+            window.print();
+        }
+
+        function updateTeacherDropdown() {
+            const tchrs = [...new Set(assignments.map(a => a.teacher))].filter(Boolean).sort(), ts = document.getElementById('teacher-select'), bs = document.getElementById('block-teacher-select');
+            const tsVal = ts.value, bsVal = bs.value; let o = '<option value="">-- Pilih Guru --</option>'; tchrs.forEach(t => o += `<option value="${t}">${t}</option>`); ts.innerHTML = o; bs.innerHTML = o; if(tchrs.includes(tsVal)) ts.value = tsVal; if(tchrs.includes(bsVal)) bs.value = bsVal;
+            const bd = document.getElementById('block-days-container'); if(!bd.innerHTML.trim()) DEFAULT_DAYS.forEach(d => bd.innerHTML += `<label class="flex items-center space-x-1.5 bg-white border border-slate-300 px-3 py-1.5 rounded-md text-xs cursor-pointer"><input type="checkbox" value="${d}" class="blk-chk text-amber-600 rounded"><span>${d}</span></label>`);
+            bs.onchange = function() { document.querySelectorAll('.blk-chk').forEach(cb => cb.checked = !!(this.value && teacherBlocks[this.value]?.includes(cb.value))); };
+        }
+        function saveTeacherBlock() {
+            const t = document.getElementById('block-teacher-select').value; if(!t) return;
+            const d = Array.from(document.querySelectorAll('.blk-chk')).filter(cb => cb.checked).map(cb => cb.value);
+            if(d.length) teacherBlocks[t] = d; else delete teacherBlocks[t]; saveData(); showToast("Block Disimpan");
+        }
+        function renderTeacherSchedule() {
+            const t = document.getElementById('teacher-select').value, tbody = document.getElementById('teacher-schedule-body');
+            document.getElementById('teacher-empty-state').classList.toggle('hidden', !!t); document.getElementById('teacher-schedule-table').classList.toggle('hidden', !t);
+            if(!t) return; let h = [];
+            DEFAULT_DAYS.forEach(day => {
+                let hc = false; 
+                rows.filter(r=> r.days && r.days.includes(day) && r.type==='kbm').forEach(r => {
+                    const pl = schedule.filter(s => s.day===day && s.rowId===r.id && assignments.find(a=>a.id===s.assignId)?.teacher===t);
+                    if(pl.length) { hc=true; pl.forEach(p => h.push(`<tr><td class="text-center p-2 font-bold bg-green-50 text-green-800">${day}</td><td class="text-center text-xs p-2">${r.time}</td><td class="text-center font-bold text-slate-700 bg-slate-50 p-2">${r.label}</td><td class="text-center font-bold text-indigo-700 p-2 bg-white">Kelas ${classes.find(c=>c.id===p.classId)?.name} - ${assignments.find(a=>a.id===p.assignId)?.subject}</td></tr>`)); }
+                });
+                if(!hc) h.push(`<tr><td class="text-center p-2 font-bold text-slate-400 bg-slate-50">${day}</td><td colspan="3" class="text-center text-xs text-slate-400 p-2 italic">Tidak mengajar</td></tr>`);
+            }); tbody.innerHTML = h.join('');
+        }
+
+        // --- AUTO PILOT & EXPORT EXCEL ---
+        function autoGenerateSchedule() {
+            if(!assignments.length) return showToast("Input beban dulu!", true);
+            let s=0, f=0; [...assignments].sort(()=>Math.random()-0.5).forEach(asg => {
+                let curP = schedule.filter(x => x.assignId === asg.id), toPl = asg.jp - curP.length; if(toPl<=0) return;
+                let chk = []; while(toPl>0) { if(toPl>=2) {chk.push(2); toPl-=2;} else {chk.push(1); toPl-=1;} }
+                let uD = curP.map(p=>p.day);
+                chk.forEach(cs => {
+                    let plc = false, cands = [];
+                    DEFAULT_DAYS.forEach(d => {
+                        if(teacherBlocks[asg.teacher]?.includes(d) || (uD.includes(d) && asg.jp>=3)) return;
+                        let kr = rows.filter(r=> r.type==='kbm' && (!r.days || r.days.includes(d)));
+                        for(let i=0; i<=kr.length-cs; i++) {
+                            let v=true, sl=[];
+                            for(let j=0; j<cs; j++) {
+                                let r=kr[i+j]; if(schedule.some(x=>x.day===d && x.rowId===r.id && x.classId===asg.classId) || schedule.some(x=>x.day===d && x.rowId===r.id && assignments.find(a=>a.id===x.assignId)?.teacher===asg.teacher)) {v=false; break;} sl.push(r.id);
+                            }
+                            if(v) cands.push({d, rs:sl});
+                        }
+                    });
+                    if(cands.length) {
+                        let c = cands[Math.floor(Math.random()*cands.length)];
+                        c.rs.forEach(rid => schedule.push({id:'s_a_'+Date.now()+Math.random(), day:c.d, rowId:rid, classId:asg.classId, assignId:asg.id}));
+                        uD.push(c.d); s+=cs; plc=true;
+                    }
+                    if(!plc && cs>1) {
+                        for(let i=0;i<cs;i++) {
+                            let sc = []; DEFAULT_DAYS.forEach(d => {
+                                if(teacherBlocks[asg.teacher]?.includes(d)) return;
+                                rows.filter(r=> r.type==='kbm' && (!r.days || r.days.includes(d))).forEach(r => { if(!schedule.some(x=>x.day===d && x.rowId===r.id && x.classId===asg.classId) && !schedule.some(x=>x.day===d && x.rowId===r.id && assignments.find(a=>a.id===x.assignId)?.teacher===asg.teacher)) sc.push({d, r:r.id}); });
+                            });
+                            if(sc.length) { let p=sc[Math.floor(Math.random()*sc.length)]; schedule.push({id:'s_f_'+Date.now()+Math.random(), day:p.d, rowId:p.r, classId:asg.classId, assignId:asg.id}); uD.push(p.d); s++; } else f++;
+                        }
+                    } else if(!plc && cs===1) f++;
+                });
+            }); saveData(); showToast(`Auto-Pilot Selesai! ${s} JP masuk. ${f?f+' Gagal':''}`);
+        }
+
+        function exportScheduleToExcel() {
+            if(!classes.length || !schedule.length) return;
+            const wD=[["JADWAL PELAJARAN"],[], ["HARI", "WAKTU", "JAM KE-", ...classes.map(c=>c.name)]], m=[{s:{r:0,c:0}, e:{r:0,c:2+classes.length}}];
+            let rIdx = 3; 
+            DEFAULT_DAYS.forEach(day => {
+                let fR = true, sR = rIdx;
+                const dayRows = rows.filter(r => !r.days || r.days.includes(day));
+                
+                dayRows.forEach(r => {
+                    let rD=[fR?day:"", r.time]; fR=false;
+                    if(r.type==='break') { 
+                        rD.push(r.label.toUpperCase()); 
+                        for(let i=0;i<classes.length;i++) rD.push(""); 
+                        m.push({s:{r:rIdx,c:2}, e:{r:rIdx,c:2+classes.length}}); 
+                    } else { 
+                        rD.push(r.label); 
+                        classes.forEach(c => { 
+                            const p=schedule.find(x=>x.day===day&&x.rowId===r.id&&x.classId===c.id), a=p?assignments.find(x=>x.id===p.assignId):null; 
+                            rD.push(a?`${a.subject} \n(${a.teacher})`:"-"); 
+                        }); 
+                    }
+                    wD.push(rD); rIdx++;
+                }); 
+                m.push({s:{r:sR,c:0}, e:{r:rIdx-1,c:0}});
+            });
+            const ws = XLSX.utils.aoa_to_sheet(wD), wb = XLSX.utils.book_new(); ws['!merges'] = m; ws['!cols'] = [{wch:15},{wch:15},{wch:10}, ...classes.map(()=>({wch:25}))];
+            XLSX.utils.book_append_sheet(wb, ws, "Jadwal_Master"); XLSX.writeFile(wb, `Jadwal_${new Date().toISOString().slice(0,10)}.xlsx`); showToast("Ekspor Sukses!");
+        }
+
+        window.onload = function() { loadData(); switchTab('builder'); };
+    </script>
+</body>
+</html>
