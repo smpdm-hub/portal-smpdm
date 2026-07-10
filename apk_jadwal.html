@@ -515,36 +515,90 @@
         }
 
         // FUNGSI BARU: Ekspor PNG Resolusi Tinggi (Tanpa Potong/Sticky Bug)
+        function exportScheduleToExcel() {
+            if(!classes.length||!schedule.length) return showToast("Data Kosong",true);
+            const wD=[["JADWAL EDU-SCHED"],[],["HARI","WAKTU","JAM KE-",...classes.map(c=>c.name)]];
+            DEFAULT_DAYS.forEach(d => {
+                let fr=true; rows.filter(r=>!r.days||r.days.includes(d)).forEach(r => {
+                    let row=[fr?d:"", r.time, r.label]; fr=false;
+                    if(r.type==='break') classes.forEach(c=>row.push((!r.targetClasses||r.targetClasses.includes(c.id))?r.label.toUpperCase():"-"));
+                    else classes.forEach(c=>{ if(r.targetClasses&&!r.targetClasses.includes(c.id)) row.push("-"); else { const p=schedule.find(x=>x.day===d&&x.rowId===r.id&&x.classId===c.id), a=p?assignMap[p.assignId]:null; row.push(a?`${a.subject} (${a.teacher})`:"-"); } });
+                    wD.push(row);
+                });
+            });
+            const a=document.createElement('a'); a.href=URL.createObjectURL(new Blob([wD.map(r=>r.map(v=>`"${(v||'').replace(/"/g,'""')}"`).join(',')).join('\n')], {type:'text/csv;charset=utf-8;'})); a.download="Jadwal.csv"; a.click(); showToast("Diekspor (CSV)");
+        }
+
         async function exportScheduleToPNG() {
             if(!classes.length || !schedule.length) return showToast("Jadwal masih kosong!", true);
             const btn = document.getElementById('btn-export-png');
             btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-1.5"></i>Proses...';
+            btn.disabled = true; // Kunci tombol agar tidak diklik berkali-kali
             
             try {
-                const table = document.querySelector('.excel-table');
-                // Setup html2canvas
-                const canvas = await html2canvas(table, { 
-                    scale: 2, // Resolusi 2x lipat agar HD
-                    backgroundColor: '#ffffff',
-                    onclone: (clonedDoc) => {
-                        // FIX: Hapus class sticky pada kloningan agar saat canvas merender overflow, posisi tidak tumpah
-                        clonedDoc.querySelectorAll('.sticky').forEach(el => {
-                            el.classList.remove('sticky', 'left-0', 'left-8', 'left-28', 'z-10', 'z-20');
-                        });
-                    }
+                // 1. Ambil tabel asli
+                const originalTable = document.querySelector('.excel-table');
+                
+                // 2. CLONE (Gandakan) tabel. Ini kunci agar UI asli tidak rusak/error.
+                const clonedTable = originalTable.cloneNode(true);
+                
+                // 3. Buat container tersembunyi (off-screen)
+                const tempContainer = document.createElement('div');
+                tempContainer.style.position = 'absolute';
+                tempContainer.style.left = '-9999px';
+                tempContainer.style.top = '-9999px';
+                tempContainer.style.backgroundColor = '#ffffff';
+                tempContainer.style.padding = '24px'; // Beri jarak tepi gambar
+                tempContainer.style.width = 'max-content'; // Paksa melebar sesuai isi
+                
+                // 4. Hapus class sticky HANYA pada tabel kloningan
+                const stickyElements = clonedTable.querySelectorAll('.sticky');
+                stickyElements.forEach(el => {
+                    el.classList.remove('sticky', 'left-0', 'left-8', 'left-28', 'z-10', 'z-20');
+                    el.style.position = 'static'; // Paksa posisi elemen ke normal
                 });
                 
-                // Trigger Download
-                const a = document.createElement('a');
-                a.href = canvas.toDataURL('image/png', 1.0); 
-                a.download = `Jadwal_Master_EduSched_${new Date().getTime()}.png`; 
-                a.click();
-                showToast("Gambar PNG berhasil diunduh.");
+                // 5. Masukkan ke dalam DOM body (wajib agar html2canvas bisa membacanya)
+                tempContainer.appendChild(clonedTable);
+                document.body.appendChild(tempContainer);
+
+                // 6. Proses render gambar HANYA dari tabel kloningan
+                const canvas = await html2canvas(tempContainer, { 
+                    scale: 1.5, // Keseimbangan kualitas dan performa memori
+                    useCORS: true,
+                    backgroundColor: '#ffffff'
+                });
+                
+                // 7. Bersih-bersih: Hapus langsung kloningan dari DOM agar memori lega
+                document.body.removeChild(tempContainer);
+
+                // 8. Eksekusi unduhan (Gunakan Blob agar aman untuk file gambar besar)
+                canvas.toBlob((blob) => {
+                    if (!blob) throw new Error("Blob gagal dibuat.");
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.style.display = 'none';
+                    a.href = url;
+                    a.download = `Jadwal_EduSched_${new Date().getTime()}.png`;
+                    document.body.appendChild(a);
+                    a.click();
+                    
+                    // Hapus URL object setelah didownload
+                    setTimeout(() => {
+                        document.body.removeChild(a);
+                        URL.revokeObjectURL(url);
+                    }, 100);
+                    showToast("Gambar PNG berhasil diunduh.");
+                }, 'image/png');
+
             } catch(e) { 
+                console.error("PNG Export Error:", e);
                 showToast("Gagal memproses gambar.", true); 
-                console.error(e);
+            } finally {
+                // Selalu kembalikan state tombol apa pun hasilnya
+                btn.innerHTML = '<i class="fa-solid fa-image mr-1.5"></i>Unduh PNG';
+                btn.disabled = false;
             }
-            btn.innerHTML = '<i class="fa-solid fa-image mr-1.5"></i>Unduh PNG';
         }
 
         function exportDataToJSON() {
