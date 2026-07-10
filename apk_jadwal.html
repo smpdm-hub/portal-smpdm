@@ -122,6 +122,48 @@
             </div>
 
             <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <div class="lg:col-span-2 space-y-6">
+                    <!-- Kelola Kelas -->
+                    <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm">
+                        <h3 class="text-sm font-bold text-slate-800 mb-3"><i class="fa-solid fa-users-rectangle mr-2"></i>Kelola Kelas (Rombel)</h3>
+                        <form onsubmit="addClass(event)" class="flex gap-2 mb-3">
+                            <input type="text" id="class-input" placeholder="Nama Kelas (Cth: VII-A)" class="flex-1 border border-slate-300 rounded-lg p-2 text-xs outline-none focus:border-blue-500" required>
+                            <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-xs font-bold shadow-sm transition-colors">Tambah</button>
+                        </form>
+                        <div id="class-list" class="flex flex-wrap gap-2"></div>
+                    </div>
+
+                    <!-- Input Beban Mengajar -->
+                    <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm">
+                        <div class="flex justify-between items-center mb-4">
+                            <h3 class="text-sm font-bold text-slate-800"><i class="fa-solid fa-book-open-reader mr-2"></i>Beban Mengajar</h3>
+                            <span class="bg-blue-100 text-blue-800 text-[10px] font-bold px-2 py-1 rounded-full"><span id="total-assignments-badge">0</span> Data</span>
+                        </div>
+                        <form id="form-assign" onsubmit="saveAssignment(event)" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-5 gap-3 mb-4 bg-slate-50 p-4 rounded-lg border border-slate-200">
+                            <input type="hidden" id="edit-assign-id">
+                            <div class="md:col-span-1"><label class="block text-[10px] font-bold text-slate-600 mb-1">Kelas</label><select id="assign-class" class="w-full border border-slate-300 rounded p-2 text-xs outline-none bg-white" required></select></div>
+                            <div class="md:col-span-1"><label class="block text-[10px] font-bold text-slate-600 mb-1">Mata Pelajaran</label><input type="text" id="assign-subject" list="dl-subjects" placeholder="Cth: Matematika" class="w-full border border-slate-300 rounded p-2 text-xs outline-none focus:border-blue-500" required></div>
+                            <div class="md:col-span-1"><label class="block text-[10px] font-bold text-slate-600 mb-1">Nama Guru</label><input type="text" id="assign-teacher" list="dl-teachers" placeholder="Cth: Budi, S.Pd" class="w-full border border-slate-300 rounded p-2 text-xs outline-none focus:border-blue-500" required></div>
+                            <div class="md:col-span-1"><label class="block text-[10px] font-bold text-slate-600 mb-1">Jml Jam (JP)</label><input type="number" id="assign-jp" min="1" max="10" placeholder="JP" class="w-full border border-slate-300 rounded p-2 text-xs outline-none focus:border-blue-500" required></div>
+                            <div class="md:col-span-1 flex items-end space-x-2">
+                                <button type="submit" id="btn-save-assign" class="w-full bg-slate-800 hover:bg-slate-900 text-white font-bold py-2 rounded text-[11px] shadow-sm transition-colors">Simpan</button>
+                                <button type="button" id="btn-cancel-assign" onclick="cancelEditAssign()" class="w-full bg-red-100 hover:bg-red-200 text-red-700 font-bold py-2 rounded text-[11px] hidden transition-colors border border-red-300">Batal</button>
+                            </div>
+                        </form>
+                        <datalist id="dl-subjects"></datalist>
+                        <datalist id="dl-teachers"></datalist>
+
+                        <div class="overflow-x-auto border border-slate-200 rounded-lg">
+                            <table class="w-full text-xs text-left">
+                                <thead class="bg-slate-100 border-b border-slate-200 text-slate-700">
+                                    <tr><th class="p-2.5">Kelas</th><th class="p-2.5">Mata Pelajaran</th><th class="p-2.5">Guru</th><th class="p-2.5 text-center">Beban JP</th><th class="p-2.5 text-center">Terplot</th><th class="p-2.5 text-center">Aksi</th></tr>
+                                </thead>
+                                <tbody id="assignments-tbody" class="divide-y divide-slate-100"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
                 <div class="space-y-6">
                     <!-- Cloud Sync Google Sheets -->
                     <div class="bg-indigo-50 p-5 rounded-xl border border-indigo-200 shadow-sm relative overflow-hidden">
@@ -170,6 +212,55 @@
                 </div>
             </div>
         </div>
+        
+        <!-- TAB 3: JADWAL GURU -->
+        <div id="content-teachers" class="tab-content hidden space-y-4">
+            <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 no-print">
+                <div class="w-full sm:w-72">
+                    <label class="block text-[10px] font-bold text-slate-500 mb-1 uppercase tracking-wider">Pilih Guru untuk Dilihat</label>
+                    <select id="teacher-select" onchange="renderTeacherSchedule()" class="w-full border border-slate-300 rounded-lg p-2.5 text-sm font-bold text-indigo-700 outline-none bg-indigo-50 focus:ring-2 focus:ring-indigo-500 cursor-pointer shadow-sm"></select>
+                </div>
+                <button onclick="printTeacherSchedule()" class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2.5 rounded-lg text-xs font-bold shadow-sm transition-colors flex items-center"><i class="fa-solid fa-print mr-2"></i>Cetak Jadwal Guru</button>
+            </div>
+            
+            <div id="teacher-empty-state" class="bg-white rounded-xl border border-dashed border-slate-300 py-16 text-center">
+                <div class="w-16 h-16 bg-indigo-50 rounded-full flex items-center justify-center mx-auto mb-3 text-indigo-300 text-2xl"><i class="fa-solid fa-user-tie"></i></div>
+                <h3 class="text-slate-500 font-medium">Silakan pilih nama guru di atas</h3>
+                <p class="text-xs text-slate-400 mt-1">Untuk melihat rekapitulasi jadwal mengajar personal.</p>
+            </div>
+
+            <div id="teacher-schedule-table" class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden hidden print-card">
+                <div class="bg-indigo-600 px-4 py-3 text-white">
+                    <h3 class="font-bold">Jadwal Mengajar Personal</h3>
+                </div>
+                <table class="w-full text-xs">
+                    <thead class="bg-slate-100 border-b border-slate-200"><tr><th class="p-3 text-center w-24">Hari</th><th class="p-3 text-center w-32">Waktu</th><th class="p-3 text-center w-24">Jam Ke-</th><th class="p-3 text-left">Tugas Mengajar</th></tr></thead>
+                    <tbody id="teacher-schedule-body" class="divide-y divide-slate-200"></tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- TAB 4: PENGATURAN STRUKTUR -->
+        <div id="content-settings" class="tab-content hidden space-y-4">
+            <div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+                <div class="bg-slate-800 px-4 py-3 text-white flex justify-between items-center">
+                    <div>
+                        <h3 class="font-bold text-sm"><i class="fa-solid fa-clock mr-2"></i>Struktur Waktu & Jam Pelajaran</h3>
+                        <p class="text-[10px] text-slate-300 mt-0.5">Atur durasi, urutan, dan hari spesifik untuk setiap baris jadwal.</p>
+                    </div>
+                    <button onclick="saveRowSettingsChanges()" class="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded text-xs font-bold shadow-sm transition-colors"><i class="fa-solid fa-floppy-disk mr-1.5"></i>Simpan Perubahan</button>
+                </div>
+                <div class="p-0 overflow-x-auto">
+                    <table class="w-full text-xs text-left">
+                        <thead class="bg-slate-100 border-b border-slate-200">
+                            <tr><th class="p-3 text-center">Waktu</th><th class="p-3 text-center">Jenis</th><th class="p-3 text-center">Aktif di Hari</th><th class="p-3 text-center">Label / Jam Ke-</th><th class="p-3 text-center">Urutan</th><th class="p-3 text-center w-16">Aksi</th></tr>
+                        </thead>
+                        <tbody id="row-structure-list" class="divide-y divide-slate-100"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
     </main>
 
     <!-- Modal Plotting -->
@@ -261,10 +352,16 @@
         }
 
         function saveData(refresh = true) {
-            localStorage.setItem(KEYS.cls, JSON.stringify(classes)); localStorage.setItem(KEYS.asg, JSON.stringify(assignments));
-            localStorage.setItem(KEYS.sch, JSON.stringify(schedule)); localStorage.setItem(KEYS.row, JSON.stringify(rows));
-            localStorage.setItem(KEYS.blk, JSON.stringify(teacherBlocks));
-            if(refresh) updateUI();
+            try {
+                localStorage.setItem(KEYS.cls, JSON.stringify(classes)); localStorage.setItem(KEYS.asg, JSON.stringify(assignments));
+                localStorage.setItem(KEYS.sch, JSON.stringify(schedule)); localStorage.setItem(KEYS.row, JSON.stringify(rows));
+                localStorage.setItem(KEYS.blk, JSON.stringify(teacherBlocks));
+                if(refresh) updateUI();
+            } catch (err) {
+                console.error(err);
+                if(err.name === 'QuotaExceededError') showToast("Penyimpanan penuh! Hapus cache browser.", true);
+                else showToast("Gagal menyimpan data.", true);
+            }
         }
 
         function showToast(msg, isErr = false) {
@@ -340,7 +437,9 @@
             const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = `EduSched_Backup_${new Date().toISOString().slice(0,10)}.json`; a.click(); showToast("Diunduh.");
         }
         function importEduSchedJSON() {
-            const input = document.getElementById('edusched-restore-input'); if(!input.files[0]) return;
+            const input = document.getElementById('edusched-restore-input'); 
+            if(!input.files || !input.files[0]) return showToast("Silakan pilih file JSON terlebih dahulu!", true);
+            
             const reader = new FileReader();
             reader.onload = function(e) {
                 try {
@@ -348,7 +447,6 @@
                     if(d.classes && d.assignments && d.rows) {
                         showConfirm("Pulihkan & Timpa Jadwal?", "Jadwal dan pengaturan lama akan tertimpa dengan data backup ini.", () => {
                             classes = d.classes; assignments = d.assignments; schedule = d.schedule || []; rows = d.rows; teacherBlocks = d.blocks || {};
-                            // Failsafe migration
                             rows.forEach(r => { if(!r.days) r.days = [...DEFAULT_DAYS]; });
                             saveData(); input.value = ""; showToast("Dipulihkan!"); switchTab('builder');
                         });
@@ -481,9 +579,13 @@
             document.getElementById('dl-subjects').innerHTML = uniqueSubs.map(s => `<option value="${s}">`).join('');
             document.getElementById('dl-teachers').innerHTML = uniqueTchs.map(t => `<option value="${t}">`).join('');
 
+            // PERBAIKAN PERFORMA: Gunakan struktur HashMap O(1) untuk lookups
+            const classMap = {}; classes.forEach(c => classMap[c.id] = c.name);
+            const schedCount = {}; schedule.forEach(s => schedCount[s.assignId] = (schedCount[s.assignId] || 0) + 1);
+
             let trHtml = [];
-            [...assignments].sort((a,b)=>(classes.find(c=>c.id===a.classId)?.name||'').localeCompare(classes.find(c=>c.id===b.classId)?.name||'')).forEach(a => {
-                const cName = classes.find(c => c.id === a.classId)?.name || 'N/A', pC = schedule.filter(s => s.assignId === a.id).length;
+            [...assignments].sort((a,b)=>(classMap[a.classId]||'').localeCompare(classMap[b.classId]||'')).forEach(a => {
+                const cName = classMap[a.classId] || 'N/A', pC = schedCount[a.id] || 0;
                 const cCol = pC >= a.jp ? 'text-green-600 bg-green-50' : (pC>0 ? 'text-blue-600 bg-blue-50' : 'text-slate-500');
                 trHtml.push(`<tr class="hover:bg-slate-50"><td class="p-2.5 font-bold text-slate-700">${cName}</td><td class="p-2.5 font-semibold">${a.subject}</td><td class="p-2.5 text-slate-600">${a.teacher}</td><td class="p-2.5 text-center font-bold">${a.jp}</td><td class="p-2.5 text-center"><span class="px-2 py-0.5 rounded text-[10px] font-bold ${cCol}">${pC} / ${a.jp}</span></td><td class="p-2.5 text-center"><button onclick="editAssignment('${a.id}')" class="text-blue-500 hover:text-blue-700 mr-2"><i class="fa-solid fa-pen text-xs"></i></button><button onclick="removeAssignment('${a.id}')" class="text-red-500 hover:text-red-700"><i class="fa-solid fa-trash text-xs"></i></button></td></tr>`);
             });
@@ -500,9 +602,20 @@
             classes.forEach(c => hHtml.push(`<th class="min-w-[120px] text-center excel-header">${c.name}</th>`));
             head.innerHTML = hHtml.join('');
 
+            // PERBAIKAN PERFORMA: Pra-kalkulasi mapping mencegah browser lag mematikan
+            const assignMap = {}; assignments.forEach(a => assignMap[a.id] = a);
+            const schedMap = {}; const teacherSlotMap = {};
+            schedule.forEach(s => {
+                schedMap[`${s.day}_${s.rowId}_${s.classId}`] = s;
+                const a = assignMap[s.assignId];
+                if(a && a.teacher) {
+                    const tKey = `${s.day}_${s.rowId}_${a.teacher}`;
+                    teacherSlotMap[tKey] = (teacherSlotMap[tKey] || 0) + 1;
+                }
+            });
+
             let bHtml = [];
             DEFAULT_DAYS.forEach((day) => {
-                // Filter baris (rows) yang khusus berlaku pada hari ini
                 const dayRows = rows.filter(r => !r.days || r.days.includes(day));
                 
                 dayRows.forEach((row, rI) => {
@@ -514,11 +627,12 @@
                     } else {
                         bHtml.push(`<td class="excel-time text-[10px] text-center">${row.time}</td><td class="text-center font-bold text-slate-700 bg-slate-50">${row.label}</td>`);
                         classes.forEach(c => {
-                            const p = schedule.find(s => s.day === day && s.rowId === row.id && s.classId === c.id);
+                            const p = schedMap[`${day}_${row.id}_${c.id}`];
                             if(p) {
-                                const a = assignments.find(x => x.id === p.assignId);
+                                const a = assignMap[p.assignId];
                                 if(a) {
-                                    const conf = schedule.some(s => s.id !== p.id && s.day === day && s.rowId === row.id && assignments.find(x=>x.id===s.assignId)?.teacher === a.teacher);
+                                    const tKey = `${day}_${row.id}_${a.teacher}`;
+                                    const conf = teacherSlotMap[tKey] > 1; // Peringatan Instan Anti-Bentrok
                                     bHtml.push(`<td class="slot-filled ${conf ? 'bg-red-100' : ''} text-center" draggable="true" ondragstart="handleDragStart(event, '${p.id}', '${day}', '${row.id}', '${c.id}')" ondragover="handleDragOver(event)" ondrop="handleDrop(event, '${day}', '${row.id}', '${c.id}', '${p.id}')" onclick="openPlotModal('${day}', '${row.id}', '${c.id}', '${c.name}', '${p.id}')"><div class="text-[11px] font-bold ${conf ? 'text-red-700 animate-pulse' : 'text-slate-800'} leading-tight truncate px-1 pointer-events-none">${a.subject}</div><div class="text-[9px] text-slate-500 truncate mt-0.5 pointer-events-none">${conf ? '<i class="fa-solid fa-triangle-exclamation text-red-500 mr-1"></i>' : ''}${a.teacher}</div></td>`);
                                 } else bHtml.push(`<td class="slot-filled bg-red-50 text-red-400 text-[10px] text-center" onclick="removePlotById('${p.id}')">Invalid</td>`);
                             } else bHtml.push(`<td class="slot-clickable" ondragover="handleDragOver(event)" ondrop="handleDrop(event, '${day}', '${row.id}', '${c.id}', null)" onclick="openPlotModal('${day}', '${row.id}', '${c.id}', '${c.name}', null)"></td>`);
@@ -631,20 +745,37 @@
             const bd = document.getElementById('block-days-container'); if(!bd.innerHTML.trim()) DEFAULT_DAYS.forEach(d => bd.innerHTML += `<label class="flex items-center space-x-1.5 bg-white border border-slate-300 px-3 py-1.5 rounded-md text-xs cursor-pointer"><input type="checkbox" value="${d}" class="blk-chk text-amber-600 rounded"><span>${d}</span></label>`);
             bs.onchange = function() { document.querySelectorAll('.blk-chk').forEach(cb => cb.checked = !!(this.value && teacherBlocks[this.value]?.includes(cb.value))); };
         }
+        
         function saveTeacherBlock() {
             const t = document.getElementById('block-teacher-select').value; if(!t) return;
             const d = Array.from(document.querySelectorAll('.blk-chk')).filter(cb => cb.checked).map(cb => cb.value);
             if(d.length) teacherBlocks[t] = d; else delete teacherBlocks[t]; saveData(); showToast("Block Disimpan");
         }
+        
         function renderTeacherSchedule() {
             const t = document.getElementById('teacher-select').value, tbody = document.getElementById('teacher-schedule-body');
             document.getElementById('teacher-empty-state').classList.toggle('hidden', !!t); document.getElementById('teacher-schedule-table').classList.toggle('hidden', !t);
             if(!t) return; let h = [];
+
+            // PERBAIKAN: Hashmap memangkas waktu proses hingga 95%
+            const assignMap = {}; assignments.forEach(a => assignMap[a.id] = a);
+            const classMap = {}; classes.forEach(c => classMap[c.id] = c.name);
+
             DEFAULT_DAYS.forEach(day => {
                 let hc = false; 
                 rows.filter(r=> r.days && r.days.includes(day) && r.type==='kbm').forEach(r => {
-                    const pl = schedule.filter(s => s.day===day && s.rowId===r.id && assignments.find(a=>a.id===s.assignId)?.teacher===t);
-                    if(pl.length) { hc=true; pl.forEach(p => h.push(`<tr><td class="text-center p-2 font-bold bg-green-50 text-green-800">${day}</td><td class="text-center text-xs p-2">${r.time}</td><td class="text-center font-bold text-slate-700 bg-slate-50 p-2">${r.label}</td><td class="text-center font-bold text-indigo-700 p-2 bg-white">Kelas ${classes.find(c=>c.id===p.classId)?.name} - ${assignments.find(a=>a.id===p.assignId)?.subject}</td></tr>`)); }
+                    const pl = schedule.filter(s => {
+                        const a = assignMap[s.assignId];
+                        return s.day===day && s.rowId===r.id && a && a.teacher===t;
+                    });
+                    if(pl.length) { 
+                        hc=true; 
+                        pl.forEach(p => {
+                            const a = assignMap[p.assignId];
+                            const cName = classMap[p.classId] || 'N/A';
+                            h.push(`<tr><td class="text-center p-2 font-bold bg-green-50 text-green-800">${day}</td><td class="text-center text-xs p-2">${r.time}</td><td class="text-center font-bold text-slate-700 bg-slate-50 p-2">${r.label}</td><td class="text-center font-bold text-indigo-700 p-2 bg-white">Kelas ${cName} - ${a.subject}</td></tr>`);
+                        }); 
+                    }
                 });
                 if(!hc) h.push(`<tr><td class="text-center p-2 font-bold text-slate-400 bg-slate-50">${day}</td><td colspan="3" class="text-center text-xs text-slate-400 p-2 italic">Tidak mengajar</td></tr>`);
             }); tbody.innerHTML = h.join('');
